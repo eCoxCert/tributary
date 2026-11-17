@@ -32,8 +32,8 @@ M = [
     ("src/lib/verify.ts", 'if (reasons.length) return { status: "unverifiable", reasons };', "", "unchecked shown as verified"),
     ("src/lib/verify.ts", "if (i.vault.fromFactory === null)", "if (false)", "unreadable factory record shown as verified"),
     ("src/lib/verify.ts", "if (stray.length)", "if (false)", "recipients not in .katki.json accepted"),
-    ("src/lib/katkiCheck.ts", 'if (!p.ok) return { state: { state: "invalid" }, file: null };', "", "invalid .katki.json treated as ok"),
-    ("src/lib/katkiCheck.ts", 'if (text === null) return { state: { state: "missing" }, file: null };', "", "404 not detected"),
+    ("src/lib/katkiCheck.ts", 'if (!p.ok) return { state: { state: "invalid" }, file: null, provenance: skipped, handles: skipped };', "", "invalid .katki.json treated as ok"),
+    ("src/lib/katkiCheck.ts", 'if (text === null) return { state: { state: "missing" }, file: null, provenance: skipped, handles: skipped };', "", "404 not detected"),
     ("src/lib/cardVerify.ts", "token: p.vault.token,", "token: p.quoteToken,", "card ignores vault token"),
     ("src/lib/katki.ts", "if (isPlaceholderWallet(wallet)) {", "if (false) {", "placeholder wallet accepted"),
     ("src/lib/github.ts", 'j.status === "ahead" || j.status === "identical" ? "ancestor" : "not-ancestor"', '"ancestor"', "compare: diverged/behind accepted"),
@@ -42,6 +42,11 @@ M = [
     ("src/lib/katkiCheck.ts", "return c.ok ? ({ state: \"ok\" } as RepoCheck)", "return true ? ({ state: \"ok\" } as RepoCheck)", "handles not checked"),
     ("src/lib/katkiCheck.ts", "return r === \"ancestor\" ?", "return true ?", "provenance not checked"),
     ("src/lib/verify.ts", 'if (c.state === "mismatch") problems.push(c.detail);', "", "repo checks ignored"),
+    ("src/lib/visibility.ts", 'if (p.visible === 0) return p.error ? "list" : "empty";', 'if (p.visible === 0) return "no-match";', "empty list shown as 'no match'"),
+    ("src/lib/visibility.ts", 'return v.status === "verified" || v.status === "unverifiable";', 'return v.status === "verified";', "unverifiable launches hidden"),
+    ("src/lib/visibility.ts", "if (!hasMeta || !v) return false;", "if (!v) return false;", "non-Tributary token listed"),
+    ("src/lib/visibility.ts", "n === 1 ? word", "n === 0 ? word", "singular/plural wrong"),
+    ("src/lib/visibility.ts", "if (p.anyPending && p.visible === 0) return \"loading\";", "", "empty flashes while cards load"),
 ]
 bad = 0
 for path, old, new, what in M:

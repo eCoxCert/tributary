@@ -12,6 +12,7 @@ describe("isListedVerdict", () => {
   it("never lists a launch without Tributary metadata, except in the debug view", () => {
     expect(isListedVerdict(false, null, false)).toBe(false);
     expect(isListedVerdict(false, null, true)).toBe(true);
+    expect(isListedVerdict(false, { status: "verified" }, false)).toBe(false);
   });
 });
 
