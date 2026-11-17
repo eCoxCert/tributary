@@ -18,7 +18,7 @@ import { allowanceOf, approveToken, sendCalldata, wethBalance, wrapEth } from ".
 import { estimateFirstBuy } from "../lib/curveMath";
 import { MAX_RECIPIENTS } from "../lib/split";
 import { AMMORA_PROTOCOL_TRADING_FEE_SHARE_BPS } from "@ammora-protocol/sdk";
-import type { AllocationRead } from "../lib/allocation";
+import { readAllocation, type AllocationRead } from "../lib/allocation";
 import type { VaultSnapshot } from "../lib/launches";
 import { readVaultSnapshot } from "../lib/launches";
 import { useQuery } from "@tanstack/react-query";
@@ -238,7 +238,6 @@ export function Create() {
     queryKey: ["done-alloc", launched?.token],
     enabled: !!launched && hasBuy,
     queryFn: async () => {
-      const { readAllocation } = await import("../lib/allocation");
       return readAllocation({ token: launched!.token, curve: launched!.curve, creator: w.address as Address, txHash: launched!.hash, block: launched!.block });
     },
   });
@@ -246,7 +245,7 @@ export function Create() {
 
   const feePct = tpl.data ? tpl.data.feeBps / 100 : null;
   const protocolPct = AMMORA_PROTOCOL_TRADING_FEE_SHARE_BPS / 100;
-  const katkiInfoForPanel = useMemo(() => (found ? { file: found.file, history: found.history, repo: found.info, notes: [] } : undefined), [found]);
+  const katkiInfoForPanel = useMemo(() => (found ? { file: found.file, history: found.history, repo: found.info, notes: [], katki: { state: "ok" as const, wallets: found.file.contributors.map((c) => c.wallet) } } : undefined), [found]);
 
   return (
     <main className="page">
@@ -432,7 +431,7 @@ export function Create() {
                     <span className="affix">ETH</span>
                   </div>
                   <span className="hint">
-                    Buy {firstBuy.trim() && firstBuyOk ? "" : "some "}tokens in the launch transaction itself, at the starting price, then send them to the {selection?.ok ? selection.included.length : ""} fee recipients by commit share. The sends are separate transfers from your wallet, and nothing on chain forces them. Leave empty for no allocation.
+                    Buy {firstBuy.trim() && firstBuyOk ? "" : "some "}tokens in the launch transaction itself, at the starting price, then send them to the {selection?.ok ? selection.included.length : ""} fee recipients by commit share. Each send is an ordinary token transfer from your wallet, and nothing on chain forces them. Leave empty for no allocation.
                   </span>
                   {!firstBuyOk && <span className="err">Enter an ETH amount, for example 0.01.</span>}
                 </div>

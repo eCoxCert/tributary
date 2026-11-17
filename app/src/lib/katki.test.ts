@@ -76,10 +76,21 @@ describe("checkAgainstHistory", () => {
   });
 });
 
+describe("placeholder wallets", () => {
+  it("rejects the template placeholder with a replace-it message", () => {
+    const r = parseKatki(file([{ github: "mira-k", wallet: "0xYOUR_WALLET_ADDRESS" }]));
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.errors[0]?.code).toBe("placeholder-wallet");
+      expect(r.errors[0]?.message).toMatch(/Replace it with your wallet/);
+    }
+  });
+});
+
 describe("templateFor", () => {
   it("fills handles from history and leaves wallets empty", () => {
     const t = JSON.parse(templateFor([{ login: "a", contributions: 5 }, { login: "b", contributions: 2 }]));
     expect(t.version).toBe(1);
-    expect(t.contributors).toEqual([{ github: "a", wallet: "0x..." }, { github: "b", wallet: "0x..." }]);
+    expect(t.contributors).toEqual([{ github: "a", wallet: "0xYOUR_WALLET_ADDRESS" }, { github: "b", wallet: "0xYOUR_WALLET_ADDRESS" }]);
   });
 });

@@ -20,6 +20,11 @@
     "errors": []
   },
   {
+    "file": "fixture-unverifiable-light-1440.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
     "file": "fixture-loading-light-1440.png",
     "overflow": false,
     "errors": []
@@ -45,6 +50,11 @@
     "errors": []
   },
   {
+    "file": "fixture-unverifiable-dark-1440.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
     "file": "fixture-ok-light-375.png",
     "overflow": false,
     "errors": []
@@ -61,6 +71,11 @@
   },
   {
     "file": "fixture-mismatch-light-375.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "file": "fixture-unverifiable-light-375.png",
     "overflow": false,
     "errors": []
   },
@@ -86,6 +101,11 @@
   },
   {
     "file": "fixture-mismatch-dark-375.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "file": "fixture-unverifiable-dark-375.png",
     "overflow": false,
     "errors": []
   }

@@ -52,11 +52,12 @@ for (const theme of ["dark", "light"] as const) {
         theme: document.documentElement.getAttribute("data-theme"),
         rows: document.querySelectorAll(".ledger tbody tr").length,
         title: document.querySelector("h1")?.textContent?.slice(0, 60) ?? "",
+        cutCode: [...document.querySelectorAll("pre.code")].filter((p) => p.scrollWidth > p.clientWidth + 1).length,
       }));
       const file = `${r.name}-${theme}-${width}.png`;
       await page.screenshot({ path: resolve(OUT, file), fullPage: true });
-      report.push({ route: r.name, theme, width, overflow: m.sw > m.cw, scrollWidth: m.sw, clientWidth: m.cw, rows: m.rows, h1: m.title, appliedTheme: m.theme, errors, file });
-      console.log(`${file.padEnd(34)} overflow=${m.sw > m.cw ? "YES" : "no"} (${m.sw}/${m.cw}) rows=${m.rows} errors=${errors.length}`);
+      report.push({ route: r.name, theme, width, overflow: m.sw > m.cw, cutCode: m.cutCode, scrollWidth: m.sw, clientWidth: m.cw, rows: m.rows, h1: m.title, appliedTheme: m.theme, errors, file });
+      console.log(`${file.padEnd(34)} overflow=${m.sw > m.cw ? "YES" : "no"} (${m.sw}/${m.cw}) cutCode=${m.cutCode} rows=${m.rows} errors=${errors.length}`);
       for (const e of errors) console.log("   ! " + e);
       await page.close();
     }
@@ -65,5 +66,5 @@ for (const theme of ["dark", "light"] as const) {
 }
 await browser.close();
 writeFileSync(resolve(OUT, "report.json"), JSON.stringify(report, null, 2));
-const bad = report.filter((x) => x.overflow || (x.errors as string[]).length);
+const bad = report.filter((x) => x.overflow || (x.cutCode as number) > 0 || (x.errors as string[]).length);
 console.log(`\n${report.length} captures, ${bad.length} with overflow or errors.`);

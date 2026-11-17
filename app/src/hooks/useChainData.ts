@@ -13,7 +13,10 @@ import {
   type VaultSnapshot,
 } from "../lib/launches";
 import { humanizeError } from "../lib/errors";
-import { verifyTributaryLaunch, type Verification } from "../lib/verify";
+import type { Verification } from "../lib/verify";
+import { verifyLaunch } from "../lib/cardVerify";
+import { readKatkiState } from "../lib/katkiCheck";
+import { ADDR } from "../lib/chain";
 import { sampleCurve, curveTotals, humanPrice } from "../lib/curveMath";
 import { scanRanges, splitRangesNewestFirst } from "../lib/logs";
 import { ammoraAFSVaultAbi } from "@ammora-protocol/sdk";
@@ -79,18 +82,21 @@ export type Card = {
 };
 
 async function readCard(rec: LaunchRecord): Promise<Card> {
-  const [snap, vault, block] = await Promise.all([
+  const [snap, vault, block, katki] = await Promise.all([
     readCurveSnapshot(rec.curve, rec.token),
     rec.meta ? readVaultSnapshot(rec.meta.vault).catch(() => null) : Promise.resolve(null),
     publicClient.getBlock({ blockNumber: rec.block }).catch(() => null),
+    rec.meta ? readKatkiState(rec.meta.repo, rec.meta.katkiCommit) : Promise.resolve(null),
   ]);
-  const verified = rec.meta
-    ? verifyTributaryLaunch({
-        metaVault: rec.meta.vault,
+  const verified = rec.meta && katki
+    ? verifyLaunch({
+        meta: rec.meta,
         partnerRecipient: snap.config.partnerRecipient,
         creatorShareOfNonProtocolBps: snap.config.creatorShareOfNonProtocolBps,
         creator: snap.state.creator,
-        vault: vault ? { owner: vault.owner, recipients: vault.recipients.map((r) => ({ recipient: r.recipient, share: r.share })) } : null,
+        quoteToken: ADDR.weth,
+        vault,
+        katki: katki.state,
       })
     : null;
   return { rec, snap, vault, timestamp: block ? Number(block.timestamp) * 1000 : null, verified };

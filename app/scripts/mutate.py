@@ -26,6 +26,16 @@ M = [
     ("src/lib/verify.ts", "if (i.creatorShareOfNonProtocolBps !== 0)", "if (false)", "fake launch: creator share not checked"),
     ("src/lib/verify.ts", "if (!eq(i.vault.owner, i.creator))", "if (false)", "fake launch: vault owner not checked"),
     ("src/lib/allocation.ts", "if (rem <= 0n) {", "if (false) {", "double send after partial failure"),
+    ("src/lib/verify.ts", "if (i.vault.fromFactory === false)", "if (false)", "fake vault: factory record ignored"),
+    ("src/lib/verify.ts", "if (!eq(i.vault.token, i.expectedToken) || !eq(i.vault.base, i.expectedToken))", "if (false)", "fake vault: token/base not checked"),
+    ("src/lib/verify.ts", 'if (i.katki.state === "missing")', "if (false)", ".katki.json 404 not a mismatch"),
+    ("src/lib/verify.ts", 'if (reasons.length) return { status: "unverifiable", reasons };', "", "unchecked shown as verified"),
+    ("src/lib/verify.ts", "if (i.vault.fromFactory === null)", "if (false)", "unreadable factory record shown as verified"),
+    ("src/lib/verify.ts", "if (stray.length)", "if (false)", "recipients not in .katki.json accepted"),
+    ("src/lib/katkiCheck.ts", 'if (!p.ok) return { state: { state: "invalid" }, file: null };', "", "invalid .katki.json treated as ok"),
+    ("src/lib/katkiCheck.ts", 'if (text === null) return { state: { state: "missing" }, file: null };', "", "404 not detected"),
+    ("src/lib/cardVerify.ts", "token: p.vault.token,", "token: p.quoteToken,", "card ignores vault token"),
+    ("src/lib/katki.ts", "if (isPlaceholderWallet(wallet)) {", "if (false) {", "placeholder wallet accepted"),
 ]
 bad = 0
 for path, old, new, what in M:

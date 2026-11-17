@@ -16,6 +16,7 @@ export const FIXTURE_CURVE = "0x2F520e4e7E201E4391E1265625Dec76751dBCd8C" as Add
 export const FIXTURE_OWNER = "0x1111111111111111111111111111111111111111" as Address;
 export const FIXTURE_VAULT = "0x2222222222222222222222222222222222222222" as Address;
 const FEE_STORE = "0x414Be4a093fDFd7292dCa95C4D6fdD3905Ee6800" as Address;
+const WETH = "0x4200000000000000000000000000000000000006" as Address;
 const SHA = "3f9a2c1d4e5b6a7988776655443322110ffeeddc";
 
 const sel = selectVaultRecipients(EXAMPLE_CONTRIBUTORS.map((c) => ({ github: c.github, wallet: c.wallet, commits: c.commits })));
@@ -27,6 +28,7 @@ export async function fixtureLaunch(kind: string): Promise<LaunchData> {
   if (kind === "error") throw new Error("The GIWA Sepolia RPC timed out after 10 seconds (fixture).");
   const real = await readCurveSnapshot(FIXTURE_CURVE, FIXTURE_TOKEN);
   const good = kind !== "mismatch";
+  if (kind === "info-wait") await new Promise(() => {});
   const snap = good
     ? { ...real, state: { ...real.state, creator: FIXTURE_OWNER, partnerRecipient: FIXTURE_VAULT, feeVault: FEE_STORE }, config: { ...real.config, partnerRecipient: FIXTURE_VAULT, creatorShareOfNonProtocolBps: 0 } }
     : real; // mismatch: the real config names someone else and gives the creator 30% of the fee
@@ -38,6 +40,9 @@ export function fixtureVault(kind: string): VaultSnapshot {
   return {
     vault: FIXTURE_VAULT,
     owner: kind === "mismatch" ? (included[0]!.wallet as Address) : FIXTURE_OWNER,
+    token: WETH,
+    base: WETH,
+    fromFactory: true,
     recipients: included.map((r, i) => ({ index: i, recipient: r.wallet as Address, share: BigInt(r.bps), claimed: i === 0 ? 42_000_000_000_000000n : 0n, claimable: unclaimed[i]! })),
     totalShare: 10_000n,
     totalFunded: 60_000_000_000_000000n,
@@ -48,12 +53,13 @@ export function fixtureVault(kind: string): VaultSnapshot {
   };
 }
 
-export const fixtureInfo: KatkiInfo = {
+export const fixtureInfo = (kind: string): KatkiInfo => ({
+  katki: kind === "unverifiable" ? { state: "unavailable", reason: "rate limit" } : { state: "ok", wallets: EXAMPLE_CONTRIBUTORS.map((c) => c.wallet) },
   file: { version: 1, contributors: EXAMPLE_CONTRIBUTORS.map((c) => ({ github: c.github, wallet: c.wallet as `0x${string}` })) },
   history: [...EXAMPLE_CONTRIBUTORS.map((c) => ({ login: c.github, contributions: c.commits })), { login: "ayo-b", contributions: 31 }],
   repo: { fullName: "tidewater/quill-rpc", defaultBranch: "main", stars: 2140, language: "TypeScript", isPrivate: false, htmlUrl: "https://github.com/tidewater/quill-rpc" },
   notes: [],
-};
+});
 
 export const fixtureRecord: LaunchRecord = {
   token: FIXTURE_TOKEN,

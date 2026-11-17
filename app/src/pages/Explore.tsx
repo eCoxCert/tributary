@@ -2,7 +2,7 @@ import { useTitle } from "../hooks/useTitle";
 import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Banner, SkeletonRows } from "../components/ui";
-import { LaunchRow, LaunchesHead, statusOf } from "../components/LaunchRows";
+import { LaunchRow, LaunchesHead, isListed, statusOf } from "../components/LaunchRows";
 import { useCards, useDiscovery, type Card } from "../hooks/useChainData";
 import { fmt } from "../lib/format";
 
@@ -23,13 +23,14 @@ export function Explore() {
   const recs = d.launches.slice(0, limit);
   const queries = useCards(recs);
   const cards: (Card | undefined)[] = queries.map((q) => q.data);
-  const loaded = cards.filter(Boolean) as Card[];
+  const loaded = (cards.filter(Boolean) as Card[]).filter((c) => isListed(c, debug));
+  const settled = cards.filter(Boolean).length;
 
   const view = useMemo(() => {
     const t = term.trim().toLowerCase();
     const items = recs.map((rec, i) => ({ rec, q: queries[i]!, card: cards[i] }));
     const filtered = items.filter((it) => {
-      if (!debug && it.card?.verified && !it.card.verified.ok) return false; // chain does not back the Tributary claim
+      if (it.card && !isListed(it.card, debug)) return false; // only verified Tributary launches are listed
       if (filter !== "all" && it.card) {
         const s = statusOf(it.card);
         if (filter === "grad" ? s !== "grad" : s === "grad") return false;
@@ -52,7 +53,7 @@ export function Explore() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recs.map((r) => r.curve).join(), queries.map((q) => q.dataUpdatedAt).join(), filter, term, sort]);
 
-  const allRead = !d.scanning && loaded.length === recs.length;
+  const allRead = !d.scanning && settled === recs.length;
   const live = loaded.filter((c) => statusOf(c) !== "grad").length;
   const grad = loaded.filter((c) => statusOf(c) === "grad").length;
   const people = loaded.reduce((a, c) => a + (c.vault?.recipients.length ?? 0), 0);
@@ -100,7 +101,7 @@ export function Explore() {
         {d.error && (
           <div style={{ marginBottom: 16 }}>
             <Banner kind="err" action={<button className="btn btn-sm" type="button" onClick={d.retry}>Try again</button>}>
-              <b>Launches did not load.</b> {d.error}
+              <b>Launches did not load.</b> {d.error} Nothing was sent; your funds are not affected.
               {d.launches.length ? ` Showing the ${d.launches.length} found before the error.` : ""}
             </Banner>
           </div>
@@ -108,15 +109,24 @@ export function Explore() {
 
         <div className="panel">
           {noResults ? (
-            <div className="notice notice-c">
-              <h3>{debug ? "No launches found in the scanned blocks" : "No Tributary launches yet"}</h3>
-              <p>
-                {debug
-                  ? "The factory emitted no LaunchCreated events in the scanned range. Look further back below."
-                  : "A launch appears here once someone creates one from a repository with a .katki.json. Be the first."}
-              </p>
-              {!debug && <Link className="btn btn-sm" to="/create">Launch your repo</Link>}
-            </div>
+            <table className="ledger stack launches">
+              <LaunchesHead />
+              <tbody>
+                <tr>
+                  <td className="full" colSpan={7}>
+                    <div className="notice notice-c">
+                      <h3>{debug ? "No launches found in the scanned blocks" : "No Tributary launches yet"}</h3>
+                      <p>
+                        {debug
+                          ? "The factory emitted no LaunchCreated events in the scanned range. Look further back below."
+                          : "A launch appears here once someone creates one from a repository with a .katki.json. Be the first."}
+                      </p>
+                      {!debug && <Link className="btn btn-sm" to="/create">Launch your repo</Link>}
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           ) : (
             <>
               <table className="ledger stack launches" aria-describedby="count">
@@ -149,7 +159,7 @@ export function Explore() {
         </p>
         <div className="scan-actions">
           {d.launches.length > limit && <button className="btn btn-sm" type="button" onClick={() => setLimit((l) => l + PAGE)}>Show more launches</button>}
-          {d.source === "chain" && !d.scanning && <button className="btn btn-sm" type="button" onClick={d.extend}>Scan further back</button>}
+          {d.source === "chain" && !d.scanning && <button className="btn btn-sm" type="button" onClick={d.extend}>Look further back</button>}
         </div>
       </div>
     </main>

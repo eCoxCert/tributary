@@ -3,11 +3,11 @@ import { Link } from "react-router-dom";
 import { Banner } from "../components/ui";
 import { KatkiCode } from "../components/KatkiCode";
 import { useTitle } from "../hooks/useTitle";
-import { parseKatki, type ParseResult } from "../lib/katki";
+import { parseKatki, WALLET_PLACEHOLDER, type ParseResult } from "../lib/katki";
 import { MAX_RECIPIENTS, MIN_RECIPIENTS } from "../lib/split";
 import { EXAMPLE_CONTRIBUTORS } from "../lib/examples";
 
-const SAMPLE = JSON.stringify({ version: 1, contributors: EXAMPLE_CONTRIBUTORS.slice(0, 2).map((c) => ({ github: c.github, wallet: c.wallet })) }, null, 2);
+const SAMPLE = JSON.stringify({ version: 1, contributors: EXAMPLE_CONTRIBUTORS.slice(0, 2).map((c) => ({ github: c.github, wallet: WALLET_PLACEHOLDER })) }, null, 2);
 
 export function Katki() {
   useTitle(".katki.json format");
@@ -29,13 +29,13 @@ export function Katki() {
             <section className="panel" aria-labelledby="schema-h">
               <div className="panel-hd"><h2 id="schema-h">The file</h2></div>
               <div className="panel-bd" style={{ display: "grid", gap: 16 }}>
-                <KatkiCode label="Example .katki.json" rows={EXAMPLE_CONTRIBUTORS.slice(0, 2).map((c) => ({ github: c.github, wallet: c.wallet }))} />
+                <KatkiCode label="Example .katki.json" wrap rows={EXAMPLE_CONTRIBUTORS.slice(0, 2).map((c) => ({ github: c.github, wallet: WALLET_PLACEHOLDER }))} />
                 <dl className="kv fmt">
                   <div><dt><span className="mono">version</span></dt><dd>The number 1</dd></div>
                   <div><dt><span className="mono">contributors[].github</span></dt><dd>A GitHub username. Listed once per person.</dd></div>
                   <div><dt><span className="mono">contributors[].wallet</span></dt><dd>A GIWA Sepolia address, 0x plus 40 hex characters</dd></div>
                 </dl>
-                <p className="muted-note">There is no weight in the file. Tributary reads each listed person's commit count from the GitHub contributors list of the repository, so nobody has to maintain numbers by hand. The addresses above are invented examples.</p>
+                <p className="muted-note">There is no weight in the file. Tributary reads each listed person's commit count from the GitHub contributors list of the repository, so nobody has to maintain numbers by hand. Replace the placeholder with each person's real wallet address.</p>
               </div>
             </section>
 
@@ -89,7 +89,7 @@ export function Katki() {
               <div><dt>Fee recipients</dt><dd>{MIN_RECIPIENTS} to {MAX_RECIPIENTS}, top by commits</dd></div>
               <div><dt>Weights</dt><dd>From GitHub commit counts</dd></div>
             </dl>
-            <div className="panel-note"><Link className="btn btn-sm btn-primary" to="/create">Launch your repo</Link></div>
+            <div className="panel-note"><Link className="btn btn-sm" to="/create">Launch your repo</Link></div>
           </aside>
         </div>
       </div>

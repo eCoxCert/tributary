@@ -5,8 +5,10 @@ import { ammoraLaunchFactoryV4Abi } from "@ammora-protocol/sdk";
 import { ADDR, publicClient } from "../lib/chain";
 import { findLaunch, readCurveSnapshot, readVaultSnapshot, type CurveSnapshot, type LaunchRecord } from "../lib/launches";
 import { decodeTributaryMetadata, type TributaryMeta } from "../lib/metadata";
-import { getContributors, getKatkiText, getRepoInfo, parseRepoInput, type RepoInfo } from "../lib/github";
-import { parseKatki, type KatkiFile, type RepoContributor } from "../lib/katki";
+import { getContributors, getRepoInfo, parseRepoInput, type RepoInfo } from "../lib/github";
+import type { KatkiFile, RepoContributor } from "../lib/katki";
+import { readKatkiState } from "../lib/katkiCheck";
+import type { KatkiState } from "../lib/verify";
 import { readAllocation, type AllocationRead } from "../lib/allocation";
 
 const ZERO = "0x0000000000000000000000000000000000000000";
@@ -85,6 +87,8 @@ export type KatkiInfo = {
   history: RepoContributor[] | null;
   repo: RepoInfo | null;
   notes: string[];
+  /** What .katki.json looked like at the recorded commit (404 / invalid / unreachable / ok). */
+  katki: KatkiState;
 };
 
 /** Handles and commit counts for a launch's recipients. Best effort: GitHub may be rate limited. */
@@ -95,21 +99,17 @@ export function useKatkiInfo(meta: TributaryMeta | null) {
     staleTime: 10 * 60_000,
     retry: 0,
     queryFn: async () => {
-      if (import.meta.env.DEV && fx()) return (await import("../fixtures/tributary")).fixtureInfo;
+      if (import.meta.env.DEV && fx()) return (await import("../fixtures/tributary")).fixtureInfo(fx() as string);
       const ref = parseRepoInput((meta as TributaryMeta).repo);
-      if (!ref) return { file: null, history: null, repo: null, notes: ["The repository name in the launch metadata is not valid."] };
+      if (!ref) return { file: null, history: null, repo: null, notes: ["The repository name in the launch metadata is not valid."], katki: { state: "invalid" } as KatkiState };
       const notes: string[] = [];
       let file: KatkiFile | null = null;
       let history: RepoContributor[] | null = null;
       let repo: RepoInfo | null = null;
-      try {
-        const text = await getKatkiText(ref, (meta as TributaryMeta).katkiCommit);
-        const p = text ? parseKatki(text) : null;
-        if (p?.ok) file = p.file;
-        else notes.push(".katki.json could not be read at the recorded commit.");
-      } catch (e) {
-        notes.push((e as Error).message);
-      }
+      const kr = await readKatkiState((meta as TributaryMeta).repo, (meta as TributaryMeta).katkiCommit);
+      file = kr.file;
+      if (kr.state.state === "unavailable") notes.push(`.katki.json could not be read from GitHub (${kr.state.reason}).`);
+      else if (!file) notes.push(".katki.json is missing or invalid at the recorded commit.");
       try {
         history = await getContributors(ref);
       } catch (e) {
@@ -120,7 +120,7 @@ export function useKatkiInfo(meta: TributaryMeta | null) {
       } catch {
         /* optional */
       }
-      return { file, history, repo, notes };
+      return { file, history, repo, notes, katki: kr.state };
     },
   });
 }

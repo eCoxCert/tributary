@@ -10,6 +10,7 @@ import {
   DFSClient,
   ammoraLaunchFactoryV4Abi,
   feeVaultAbi,
+  ammoraAFSFactoryAbi,
   getAmmoraV4ConfigAtBlock,
   type AmmoraV4Config,
 } from "@ammora-protocol/sdk";
@@ -238,6 +239,10 @@ export async function readCurveSnapshot(curve: Address, token: Address, client: 
 export type VaultSnapshot = {
   vault: Address;
   owner: Address;
+  token: Address;
+  base: Address;
+  /** DFS factory's own record (isVault): true, false, or null when it could not be read. */
+  fromFactory: boolean | null;
   recipients: { index: number; recipient: Address; share: bigint; claimed: bigint; claimable: bigint }[];
   totalShare: bigint;
   totalFunded: bigint;
@@ -251,14 +256,18 @@ export type VaultSnapshot = {
 export async function readVaultSnapshot(vault: Address, client: PublicClient = publicClient): Promise<VaultSnapshot> {
   const dfs = new DFSClient(client, vault, dfsOptions);
   const feeVault = (await client.readContract({ address: ADDR.factory, abi: ammoraLaunchFactoryV4Abi, functionName: "feeVault" })) as Address;
-  const [s, pending, claimSourceEnabled] = await Promise.all([
+  const [s, pending, claimSourceEnabled, fromFactory] = await Promise.all([
     dfs.getState(),
     client.readContract({ address: feeVault, abi: feeVaultAbi, functionName: "claimable", args: [ADDR.weth, vault] }) as Promise<bigint>,
     dfs.isClaimSource(feeVault),
+    client.readContract({ address: ADDR.dfsFactory, abi: ammoraAFSFactoryAbi, functionName: "isVault", args: [vault] }).then((v) => v as boolean).catch(() => null),
   ]);
   return {
     vault,
     owner: s.owner,
+    token: s.token,
+    base: s.base,
+    fromFactory,
     recipients: s.recipients.map((r) => ({ index: r.index, recipient: r.recipient, share: r.share, claimed: r.feeClaimed, claimable: r.claimable })),
     totalShare: s.totalShare,
     totalFunded: s.totalFunded,

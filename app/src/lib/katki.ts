@@ -16,6 +16,9 @@ export type KatkiIssue = { code: string; message: string; github?: string };
 const GITHUB_LOGIN = /^[A-Za-z0-9](?:[A-Za-z0-9]|-(?=[A-Za-z0-9])){0,38}$/;
 export const MAX_FILE_BYTES = 64 * 1024;
 
+export const WALLET_PLACEHOLDER = "0xYOUR_WALLET_ADDRESS";
+export const isPlaceholderWallet = (w: string) => /^0x(\.\.\.|YOUR)|YOUR_WALLET|ADDRESS$/i.test(w.trim());
+
 export type ParseResult = { ok: true; file: KatkiFile; warnings: KatkiIssue[] } | { ok: false; errors: KatkiIssue[] };
 
 /** Parses the text of a `.katki.json`. Checks shape, handles and addresses. It does not look at GitHub. */
@@ -60,6 +63,10 @@ export function parseKatki(text: string): ParseResult {
       return;
     }
     seenLogin.set(key, i);
+    if (isPlaceholderWallet(wallet)) {
+      errors.push({ code: "placeholder-wallet", message: `${github}: "${wallet}" is a placeholder. Replace it with your wallet address.`, github });
+      return;
+    }
     if (!isAddress(wallet, { strict: true })) {
       errors.push({ code: "bad-wallet", message: `${github}: "${wallet}" is not a valid wallet address (0x followed by 40 hex characters, with a correct checksum if it has capitals).`, github });
       return;
@@ -111,6 +118,6 @@ export function missingFromFile(file: KatkiFile, history: readonly RepoContribut
 
 /** Template shown when the repo has no file: logins from history, wallets left empty. */
 export function templateFor(history: readonly RepoContributor[], limit = 4): string {
-  const rows = history.slice(0, limit).map((h) => ({ github: h.login, wallet: "0x..." }));
-  return JSON.stringify({ version: 1, contributors: rows.length ? rows : [{ github: "your-handle", wallet: "0x..." }] }, null, 2);
+  const rows = history.slice(0, limit).map((h) => ({ github: h.login, wallet: WALLET_PLACEHOLDER }));
+  return JSON.stringify({ version: 1, contributors: rows.length ? rows : [{ github: "your-handle", wallet: WALLET_PLACEHOLDER }] }, null, 2);
 }

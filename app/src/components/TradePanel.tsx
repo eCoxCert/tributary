@@ -283,7 +283,7 @@ export function TradePanel({ data, recipients, ownerNote }: { data: LaunchData; 
         <dl className="kv">
           <div><dt>Price after trade</dt><dd>{priceAfter ?? "–"}</dd></div>
           <div><dt>Trading fee, {fmt.pct(feePct, feePct % 1 ? 2 : 0)}</dt><dd>{quote.data ? `${fmt.eth(quote.data.q.fee)} ${side === "buy" ? "ETH" : "WETH"}` : "–"}</dd></div>
-          <div><dt>Fee goes to</dt><dd>{recipients !== null ? `${recipients} contributors` : "Launch partner"}</dd></div>
+          <div><dt>Fee goes to</dt><dd>{recipients !== null ? `${recipients} contributors` : fmt.short(snap.state.partnerRecipient)}</dd></div>
         </dl>
         <div className="slip">
           <span>Slippage</span>

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useWalletClient } from "wagmi";
 import type { Address } from "viem";
-import { Banner, Spinner, StepList, type ProgressStep } from "./ui";
+import { Av, Banner, Spinner, StepList, type ProgressStep } from "./ui";
 import { useWallet } from "../hooks/useWallet";
 import type { KatkiInfo } from "../hooks/useLaunch";
 import type { VaultSnapshot } from "../lib/launches";
@@ -104,6 +104,15 @@ export function AllocationPanel(p: {
     }
   }
   const locked = busy || p.refreshing;
+  const disabledReason = busy
+    ? null
+    : !p.rec
+      ? "The launch transaction is still being read. Try again in a moment."
+      : ownerBal.data !== undefined && ownerBal.data < remaining
+        ? `This wallet holds ${fmt.tokens(ownerBal.data, p.decimals)} ${p.symbol}, less than the ${fmt.tokens(remaining, p.decimals)} still to send.`
+        : p.refreshing
+          ? "Refreshing what has been sent. Try again in a moment."
+          : null;
 
   return (
     <section className="panel a-alloc" aria-labelledby="alloc-h">
@@ -111,38 +120,43 @@ export function AllocationPanel(p: {
         <h2 id="alloc-h">Contributor allocation</h2>
         {p.alloc && p.alloc.firstBuy > 0n && <span className={`tag${sentCount === dueCount && dueCount > 0 ? " tag-window" : ""}`} style={{ marginLeft: "auto" }}>{sentCount} of {dueCount} sent</span>}
       </div>
-      <div className="alloc-sum">
-        {p.loading && !p.alloc ? (
-          <p>Reading the launch transaction and token transfers…</p>
-        ) : p.error ? (
-          <Banner kind="err">{p.error}</Banner>
-        ) : p.alloc && p.alloc.firstBuy === 0n ? (
-          <p>The launch owner did not buy at launch, so there is no allocation to send. Contributors earn the trading fee either way.</p>
-        ) : p.alloc ? (
-          <>
+      {p.loading && !p.alloc ? (
+        <div className="alloc-sum"><p>Reading the launch transaction and token transfers…</p></div>
+      ) : p.error ? (
+        <div className="alloc-sum"><Banner kind="err">{p.error}</Banner></div>
+      ) : p.alloc && p.alloc.firstBuy === 0n ? (
+        <div className="alloc-sum"><p>The launch owner did not buy at launch, so there is no allocation to send. Contributors earn the trading fee either way.</p></div>
+      ) : p.alloc ? (
+        <>
+          <div className="alloc-sum">
             <p>
-              The launch owner bought <b>{fmt.tokens(p.alloc.firstBuy, p.decimals)} {p.symbol}</b> in the launch transaction and sends them to the fee recipients by commit share. The sends are ordinary token transfers by the owner. Nothing on chain forces them, so this table shows what has actually been sent.
+              The launch owner bought <b>{fmt.tokens(p.alloc.firstBuy, p.decimals)} {p.symbol}</b> in the launch transaction and sends them to the fee recipients by commit share. Each send is an ordinary token transfer from the owner. Nothing on chain forces them, so this table shows what has actually been sent.
             </p>
-            <table className="ledger stack alloc">
-              <thead>
-                <tr><th>Contributor</th><th className="r">Due</th><th className="r">Received</th><th className="r">Status</th></tr>
-              </thead>
-              <tbody>
-                {rows.map((r) => (
-                  <tr key={r.wallet}>
-                    <td className="c-who full"><b>{r.github ?? fmt.short(r.wallet)}</b> {r.github && <span className="mono faint">{fmt.short(r.wallet)}</span>}</td>
-                    <td data-k="Due" className="r">{fmt.tokens(r.due, p.decimals)}</td>
-                    <td data-k="Received" className="r">{fmt.tokens(r.sent, p.decimals)}</td>
-                    <td data-k="Status" className="r c-state">{r.sent >= r.due ? <span className="status-ok">Sent</span> : <span className="status-wait">Waiting</span>}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          </div>
+          <table className="ledger stack alloc">
+            <thead>
+              <tr><th>Contributor</th><th className="r">Due</th><th className="r">Received</th><th className="r">Status</th></tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.wallet}>
+                  <td className="c-who full">
+                    <div className="who-cell"><Av seed={r.github ?? r.wallet} small /><div style={{ minWidth: 0 }}><b>{r.github ?? fmt.short(r.wallet)}</b><span className="mono">{fmt.short(r.wallet)}</span></div></div>
+                  </td>
+                  <td data-k="Due" className="r">{fmt.tokens(r.due, p.decimals)}</td>
+                  <td data-k="Received" className="r">{fmt.tokens(r.sent, p.decimals)}</td>
+                  <td data-k="Status" className="r c-state">{r.sent >= r.due ? <span className="status-ok"><svg viewBox="0 0 20 20" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true"><path d="M4 10.5 8 14.5 16 5.5" /></svg> Sent</span> : <span className="status-wait">Waiting</span>}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="alloc-sum">
             {isOwner && pending.length > 0 && (
               <div>
                 <button className="btn btn-primary" type="button" onClick={send} disabled={locked || !p.rec || (ownerBal.data !== undefined && ownerBal.data < remaining)}>
                   {busy ? <><Spinner />Sending</> : `Send ${fmt.tokens(remaining, p.decimals)} ${p.symbol} to ${pending.length} contributor${pending.length > 1 ? "s" : ""}`}
                 </button>
+                {disabledReason && <p className="err" style={{ marginTop: 8 }}>{disabledReason}</p>}
                 <p className="muted-note" style={{ marginTop: 8 }}>One transfer per contributor, each confirmed in your wallet. You can stop and come back: this page works out what is left.</p>
               </div>
             )}
@@ -150,9 +164,9 @@ export function AllocationPanel(p: {
             {steps && <StepList steps={steps} />}
             {err && <Banner kind="err">{err}</Banner>}
             {lastTx && !busy && !err && pending.length === 0 && <Banner kind="acc">All allocations sent. <a className="link" href={explorerTx(lastTx)} target="_blank" rel="noreferrer">Last transaction</a></Banner>}
-          </>
-        ) : null}
-      </div>
+          </div>
+        </>
+      ) : null}
     </section>
   );
 }

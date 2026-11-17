@@ -7,12 +7,13 @@ import { ContribPanel } from "../components/ContribPanel";
 import { AllocationPanel } from "../components/AllocationPanel";
 import { statusFromCode } from "../components/LaunchRows";
 import { NotFoundError, useAllocation, useBlockTime, useKatkiInfo, useLaunch, useLaunchRecord, useVault } from "../hooks/useLaunch";
-import { explorerAddress } from "../lib/chain";
+import { ADDR, explorerAddress } from "../lib/chain";
 import { curveTotals, humanPrice, positionAt, rawPrice, sampleCurve } from "../lib/curveMath";
 import { fmt } from "../lib/format";
 import { humanizeError } from "../lib/errors";
 import { AMMORA_PROTOCOL_TRADING_FEE_SHARE_BPS } from "@ammora-protocol/sdk";
-import { verifyTributaryLaunch, type Verification } from "../lib/verify";
+import type { Verification } from "../lib/verify";
+import { verifyLaunch } from "../lib/cardVerify";
 import { useTitle } from "../hooks/useTitle";
 
 export function Launch() {
@@ -27,20 +28,22 @@ export function Launch() {
   const launchedAt = useBlockTime(rec.data?.block);
   const vault = useVault(meta?.vault);
   const info = useKatkiInfo(meta);
+  // null while anything is still loading: the page must never look verified before every check has finished
   const verification: Verification | null = useMemo(() => {
     if (!meta || !data) return null;
-    if (vault.isPending) return null;
-    return verifyTributaryLaunch({
-      metaVault: meta.vault,
+    if (vault.isPending || info.isPending) return null;
+    return verifyLaunch({
+      meta,
       partnerRecipient: data.snap.config.partnerRecipient,
       creatorShareOfNonProtocolBps: data.snap.config.creatorShareOfNonProtocolBps,
       creator: data.snap.state.creator,
-      vault: vault.data ? { owner: vault.data.owner, recipients: vault.data.recipients.map((r) => ({ recipient: r.recipient, share: r.share })) } : null,
-      listedWallets: info.data?.file ? info.data.file.contributors.map((c) => c.wallet) : null,
+      quoteToken: ADDR.weth,
+      vault: vault.data ?? null,
+      katki: info.data ? info.data.katki : { state: "unavailable", reason: "network" },
     });
-  }, [meta, data, vault.data, vault.isPending, info.data]);
-  const tributary = !!meta && verification?.ok === true;
-  const mismatch = !!meta && verification !== null && !verification.ok;
+  }, [meta, data, vault.data, vault.isPending, info.data, info.isPending]);
+  const tributary = verification?.status === "verified";
+  const checking = !!meta && verification === null;
   const alloc = useAllocation(tributary ? rec.data : null, data?.snap.state.creator, data?.curve);
   useTitle(data ? `${data.snap.name} (${data.snap.symbol})` : "Launch");
 
@@ -70,7 +73,7 @@ export function Launch() {
         <div className="wrap">
           <Crumbs name={token ? fmt.short(token) : "launch"} />
           <Banner kind="err" action={notFound ? <Link className="btn btn-sm" to="/launches">All launches</Link> : <button className="btn btn-sm" type="button" onClick={() => q.refetch()}>Try again</button>}>
-            <b>{notFound ? "No launch at this address." : "This launch did not load."}</b> {notFound ? q.error.message : humanizeError(q.error)}
+            <b>{notFound ? "No launch at this address." : "This launch did not load."}</b> {notFound ? q.error.message : `${humanizeError(q.error)} Nothing was sent; your funds are not affected.`}
           </Banner>
         </div>
       </main>
@@ -78,7 +81,7 @@ export function Launch() {
   }
   if (!data || !geometry) return <LaunchSkeleton />;
 
-  if (!tributary && !mismatch && !debug && !(meta && verification === null)) {
+  if (!meta && !debug) {
     return (
       <main className="page">
         <div className="wrap">
@@ -97,7 +100,7 @@ export function Launch() {
 
   const { snap } = data;
   const st = statusFromCode(snap.state.status);
-  const title = meta?.repo ?? snap.name;
+  const title = tributary && meta ? meta.repo : snap.symbol;
   const feeBps = snap.state.currentFeeBps;
   const protocolPct = AMMORA_PROTOCOL_TRADING_FEE_SHARE_BPS / 100;
   const firstBuyBase = alloc.data && alloc.data.firstBuy > 0n ? Number(alloc.data.firstBuy) : undefined;
@@ -110,16 +113,30 @@ export function Launch() {
       <div className="wrap">
         <Crumbs name={title} />
 
-        {mismatch && verification && !verification.ok && (
+        {checking && (
+          <div style={{ marginBottom: 24 }}>
+            <Banner kind="warn">Checking this launch against the chain and the repository. Nothing about contributors or fees is shown until that finishes.</Banner>
+          </div>
+        )}
+        {verification?.status === "mismatch" && (
           <div style={{ marginBottom: 24 }}>
             <Banner kind="warn">
-              <b>This launch does not follow Tributary's rules.</b> Its metadata names a repository and a fee vault, but the chain does not back that up, so Tributary shows no contributors, split or fee claims for it.
+              <b>This launch does not follow Tributary's rules.</b> Its metadata names a repository and a fee vault, but the chain or the repository does not back that up, so Tributary shows no contributors, split or fee claims for it.
               <ul className="err-list" style={{ marginTop: 8 }}>{verification.problems.map((x, i) => <li key={i}>{x}</li>)}</ul>
-              Price, curve and quotes below are real.
+              <p style={{ marginTop: "var(--s-2)" }}>Price, curve and quotes below are real.</p>
             </Banner>
           </div>
         )}
-        {debug && !tributary && !mismatch && (
+        {verification?.status === "unverifiable" && (
+          <div style={{ marginBottom: 24 }}>
+            <Banner kind="warn" action={<button className="btn btn-sm" type="button" onClick={() => { void vault.refetch(); void info.refetch(); }}>Check again</button>}>
+              <b>Could not check this launch right now.</b> Tributary could not confirm its repository and fee vault, so it shows no contributors, split or fee claims. Nothing was sent; your funds are not affected.
+              <ul className="err-list" style={{ marginTop: 8 }}>{verification.reasons.map((x, i) => <li key={i}>{x}</li>)}</ul>
+              <p style={{ marginTop: "var(--s-2)" }}>Price, curve and quotes below are real.</p>
+            </Banner>
+          </div>
+        )}
+        {debug && !meta && (
           <div style={{ marginBottom: 24 }}>
             <Banner kind="warn">Debug view. This launch was not made with Tributary: it has no repository, fee vault or contributor split. Price, curve and quotes are real.</Banner>
           </div>
@@ -144,7 +161,7 @@ export function Launch() {
               Token <Addr value={data.token} label="Copy token address" href={explorerAddress(data.token)} />
             </span>
             {launchedAt.data ? <span>Launched <span className="num">{fmt.dateUtc(launchedAt.data)}</span></span> : null}
-            {info.data?.repo && (info.data.repo.language || info.data.repo.stars > 0) ? (
+            {tributary && info.data?.repo && (info.data.repo.language || info.data.repo.stars > 0) ? (
               <span>{[info.data.repo.language, `${fmt.compact(info.data.repo.stars)} stars`].filter(Boolean).join(" · ")}</span>
             ) : null}
           </div>
@@ -204,30 +221,25 @@ export function Launch() {
             )}
           </aside>
 
-          {(tributary || (!!meta && verification === null)) && meta && (
+          {checking && (
+            <section className="panel a-contrib"><div className="panel-hd"><h2>Contributors and fees</h2></div><table className="ledger stack contrib"><tbody><tr><td className="full"><Sk w="60%" /></td></tr><tr><td className="full"><Sk w="50%" /></td></tr><tr><td className="full"><Sk w="55%" /></td></tr></tbody></table></section>
+          )}
+          {tributary && meta && vault.data && (
             <>
-              {vault.isPending ? (
-                <section className="panel a-contrib"><div className="panel-hd"><h2>Contributors and fees</h2></div><table className="ledger stack contrib"><tbody><tr><td className="full"><Sk w="60%" /></td></tr><tr><td className="full"><Sk w="50%" /></td></tr><tr><td className="full"><Sk w="55%" /></td></tr></tbody></table></section>
-              ) : vault.isError || !vault.data ? (
-                <section className="panel a-contrib"><div className="panel-hd"><h2>Contributors and fees</h2></div><div className="panel-bd"><Banner kind="err" action={<button className="btn btn-sm" type="button" onClick={() => vault.refetch()}>Try again</button>}>The fee vault at {fmt.short(meta.vault)} could not be read. {vault.error ? humanizeError(vault.error) : ""}</Banner></div></section>
-              ) : (
-                <>
-                  <ContribPanel vault={vault.data} info={info.data} infoLoading={info.isPending} meta={meta} />
-                  <AllocationPanel
-                    token={data.token}
-                    symbol={snap.symbol}
-                    decimals={snap.decimals}
-                    creator={snap.state.creator}
-                    vault={vault.data}
-                    info={info.data}
-                    alloc={alloc.data}
-                    loading={rec.isPending || alloc.isPending}
-                    refreshing={alloc.isFetching}
-                    rec={rec.data ? { txHash: rec.data.txHash, block: rec.data.block, curve: data.curve } : null}
-                    error={rec.isError || alloc.isError ? "The launch transaction or the token transfers could not be read right now." : rec.isSuccess && !rec.data ? "The launch creation record was not found in the last 600,000 blocks, so the allocation cannot be shown." : null}
-                  />
-                </>
-              )}
+              <ContribPanel vault={vault.data} info={info.data} infoLoading={false} meta={meta} />
+              <AllocationPanel
+                token={data.token}
+                symbol={snap.symbol}
+                decimals={snap.decimals}
+                creator={snap.state.creator}
+                vault={vault.data}
+                info={info.data}
+                alloc={alloc.data}
+                loading={rec.isPending || alloc.isPending}
+                refreshing={alloc.isFetching}
+                rec={rec.data ? { txHash: rec.data.txHash, block: rec.data.block, curve: data.curve } : null}
+                error={rec.isError || alloc.isError ? "The launch transaction or the token transfers could not be read right now. Nothing was sent; your funds are not affected." : rec.isSuccess && !rec.data ? "The launch creation record was not found in the last 600,000 blocks, so the allocation cannot be shown." : null}
+              />
             </>
           )}
 

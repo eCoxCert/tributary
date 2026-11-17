@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { Av, IconCheck, IconDown, IconLock, SkeletonRows, StatusTag } from "../components/ui";
 import { CurveChart } from "../components/CurveChart";
 import { FeeRouter, type RouterRow } from "../components/FeeRouter";
-import { LaunchRow, LaunchesHead, statusFromCode } from "../components/LaunchRows";
+import { LaunchRow, LaunchesHead, isListed, statusFromCode } from "../components/LaunchRows";
 import { useCards, useDiscovery, usePayouts, useTemplate, type Card } from "../hooks/useChainData";
 import { AMMORA_PROTOCOL_TRADING_FEE_SHARE_BPS } from "@ammora-protocol/sdk";
 import { fmt } from "../lib/format";
@@ -22,8 +22,8 @@ export function Landing() {
   const tpl = useTemplate();
   const recs = d.launches.slice(0, 12);
   const queries = useCards(recs);
-  const cards = (queries.map((q) => q.data).filter(Boolean) as Card[]).filter((c) => !c.verified || c.verified.ok);
-  const live = recs.map((rec, i) => ({ rec, q: queries[i]! })).filter((x) => !x.q.data || ((!x.q.data.verified || x.q.data.verified.ok) && statusFromCode(x.q.data.snap.state.status) !== "grad"));
+  const cards = (queries.map((q) => q.data).filter(Boolean) as Card[]).filter((c) => isListed(c, false));
+  const live = recs.map((rec, i) => ({ rec, q: queries[i]! })).filter((x) => !x.q.data || (isListed(x.q.data, false) && statusFromCode(x.q.data.snap.state.status) !== "grad"));
   const [paused, setPaused] = useState(false);
 
   const withVault = cards.filter((c) => c.vault);
@@ -79,7 +79,7 @@ export function Landing() {
             <div className="router-body">
               <div className="router-file">
                 <div className="router-file-hd"><span className="mono">.katki.json</span><span>{feature?.rec.meta ? `main · ${feature.rec.meta.katkiCommit.slice(0, 7)}` : "version 1"}</span></div>
-                <KatkiCode label=".katki.json excerpt" more rows={EXAMPLE_CONTRIBUTORS.slice(0, 2).map((c) => ({ github: c.github, wallet: `${c.wallet.slice(0, 6)}…${c.wallet.slice(-4)}` }))} />
+                <KatkiCode label=".katki.json excerpt" wrap more rows={EXAMPLE_CONTRIBUTORS.slice(0, 2).map((c) => ({ github: c.github, wallet: `${c.wallet.slice(0, 6)}…${c.wallet.slice(-4)}` }))} />
               </div>
               <FeeRouter rows={routerRows} paused={paused} />
             </div>
@@ -180,7 +180,7 @@ export function Landing() {
               </tbody>
             </table>
           </div>
-          {d.error && <p className="hint" style={{ marginTop: 12 }}>{d.error}</p>}
+          {d.error && <p className="hint" style={{ marginTop: 12 }}>{d.error} Nothing was sent; your funds are not affected.</p>}
         </div>
       </section>
 

@@ -30,7 +30,7 @@
 .alloc-sum { display: grid; gap: var(--s-3); padding: var(--s-4); }
 .alloc-sum p { font-size: var(--fs-ui); color: var(--ink-2); }
 .alloc-sum p b { color: var(--ink); }
-.status-ok { color: var(--pos); font-weight: 550; }
+.status-ok { color: var(--accent); font-weight: 550; display: inline-flex; align-items: center; gap: 4px; }
 .status-wait { color: var(--ink-3); }
 .hatch-chip { display: inline-block; width: 12px; height: 8px; vertical-align: middle; margin-right: 6px; }
 .field textarea.input { height: auto; padding: var(--s-3); font-family: var(--font-mono); font-size: var(--fs-sm); line-height: 1.5; min-height: 140px; resize: vertical; }
@@ -46,8 +46,10 @@
 .router-note { font-size: var(--fs-cap); color: var(--ink-3); }
 .ledger td .mono { overflow-wrap: anywhere; }
 @media (max-width: 759px) {
-  .ledger.alloc tr { grid-template-columns: minmax(0, 1fr) auto; }
-  .ledger.alloc td.c-state { text-align: right; }
+  .ledger.alloc tr { grid-template-columns: minmax(0, 1fr) auto auto; }
+  .ledger.alloc td.c-who { grid-column: 1 / -1; }
+  .ledger.alloc td.r, .ledger.alloc td.c-state { text-align: right; }
+  .ledger.alloc td[data-k="Due"] { grid-column: 1; text-align: left; }
 }
 .facts-note { font-size: var(--fs-sm); color: var(--ink-3); margin-top: var(--s-2); }
 .addr .mono { overflow-wrap: anywhere; }
@@ -80,3 +82,5 @@
   .katki-grid { grid-template-columns: minmax(0, 1fr) 320px; gap: var(--s-7); }
   .katki-side { position: sticky; top: calc(var(--header-h) + var(--s-5)); }
 }
+
+@media (max-width: 520px) { .code { white-space: pre-wrap; overflow-wrap: anywhere; } }

@@ -22,6 +22,12 @@ export function statusFromCode(code: number): LaunchStatus {
   }
 }
 
+/** Listed on the launches page: verified Tributary launches only (debug view adds everything else). */
+export function isListed(card: Card, debug: boolean): boolean {
+  if (debug) return true;
+  return !!card.rec.meta && card.verified?.status === "verified";
+}
+
 export type RowModel = {
   title: string; // owner/name or token symbol
   status: LaunchStatus;
@@ -44,7 +50,7 @@ export function rowModel(card: Card): RowModel {
   const fees = vault ? `${fmt.eth(vault.totalFunded + vault.pendingInFeeVault)} ETH` : null;
   const age = timestamp ? fmt.ago(timestamp) : null;
   return {
-    title: rec.meta?.repo ?? snap.name,
+    title: card.verified?.status === "verified" && rec.meta ? rec.meta.repo : snap.name,
     status: st,
     pct: st === "grad" ? 100 : pct,
     left,
@@ -52,21 +58,21 @@ export function rowModel(card: Card): RowModel {
     recipients: vault ? vault.recipients.length : null,
     symbol: snap.symbol,
     name: snap.name,
-    sub: [rec.meta ? null : "Not a Tributary launch", age].filter(Boolean).join(" · "),
+    sub: [!rec.meta ? "Not a Tributary launch" : card.verified?.status === "mismatch" ? "Does not follow Tributary rules" : card.verified?.status === "unverifiable" ? "Could not be checked" : null, age].filter(Boolean).join(" · "),
   };
 }
 
 export function LaunchRow({ rec, q, debug }: { rec: LaunchRecord; q: UseQueryResult<Card>; debug?: boolean }) {
   const nav = useNavigate();
   const to = `/launch/${rec.token}${debug ? "?all=1" : ""}`;
-  const title = rec.meta?.repo ?? rec.token;
+  const title = fmt.short(rec.token); // never the repo from metadata until the chain and the repository agree
 
   if (q.isPending) {
     return (
       <tr>
         <td className="c-repo">
           <div className="repo">
-            <Av seed={title} tone="ink" />
+            <Av seed={rec.token} tone="ink" />
             <div style={{ minWidth: 0, flex: 1 }}>
               <Sk w="60%" />
               <div style={{ height: 6 }} />
@@ -90,7 +96,7 @@ export function LaunchRow({ rec, q, debug }: { rec: LaunchRecord; q: UseQueryRes
           <div className="repo">
             <Av seed={title} tone="ink" />
             <div style={{ minWidth: 0 }}>
-              <Link className="repo-name" to={to}>{title.length > 30 ? `${title.slice(0, 10)}…${title.slice(-6)}` : title}</Link>
+              <Link className="repo-name" to={to}>{title}</Link>
               <div className="repo-sub">This launch could not be read from the chain right now. Reload to try again.</div>
             </div>
           </div>

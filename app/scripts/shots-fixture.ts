@@ -12,6 +12,7 @@ const states: { name: string; q: string; ready: string }[] = [
   { name: "claim", q: "fixture=ok&fw=me", ready: ".is-you" },
   { name: "owner-send", q: "fixture=ok&fw=owner", ready: ".a-alloc .btn-primary" },
   { name: "mismatch", q: "fixture=mismatch", ready: ".banner-warn" },
+  { name: "unverifiable", q: "fixture=unverifiable", ready: ".banner-warn" },
   { name: "loading", q: "fixture=loading", ready: ".sk" },
   { name: "error", q: "fixture=error", ready: ".banner-err" },
   { name: "wrong-network", q: "fixture=ok&fw=wrong", ready: ".banner-warn" },
@@ -23,7 +24,7 @@ for (const [width, height] of [[1440, 900], [375, 812]] as const) {
     const ctx = await browser.newContext({ viewport: { width, height }, colorScheme: theme });
     await ctx.addInitScript((t) => localStorage.setItem("trib-theme", t), theme);
     for (const s of states) {
-      if (theme === "dark" && !["ok", "mismatch"].includes(s.name)) continue;
+      if (theme === "dark" && !["ok", "mismatch", "unverifiable"].includes(s.name)) continue;
       const page = await ctx.newPage();
       const errors: string[] = [];
       page.on("console", (m) => { if (m.type() === "error") errors.push(m.text().slice(0, 200)); });
@@ -31,7 +32,7 @@ for (const [width, height] of [[1440, 900], [375, 812]] as const) {
       await page.goto(`${BASE}#/launch/${TOKEN}?${s.q}`);
       try { await page.waitForSelector(s.ready, { timeout: 40_000 }); } catch { errors.push("not ready: " + s.ready); }
       await page.waitForTimeout(s.name === "loading" ? 300 : 2500);
-      const m = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth }));
+      const m = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth, cut: [...document.querySelectorAll("pre.code")].filter((p) => p.scrollWidth > p.clientWidth + 1).length }));
       const file = `fixture-${s.name}-${theme}-${width}.png`;
       await page.screenshot({ path: resolve(OUT, file), fullPage: true });
       console.log(file.padEnd(40), m.sw > m.cw ? `OVERFLOW ${m.sw}/${m.cw}` : "no overflow", `errors=${errors.length}`);
