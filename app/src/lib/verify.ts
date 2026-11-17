@@ -65,20 +65,20 @@ export function verifyTributaryLaunch(i: VerifyInput): Verification {
 
   if (i.katki.state === "missing") problems.push("The repository has no .katki.json at the commit recorded in the launch.");
   else if (i.katki.state === "invalid") problems.push("The .katki.json at the recorded commit is not valid.");
-  else if (i.katki.state === "unavailable") reasons.push(`.katki.json could not be read from GitHub (${i.katki.reason}).`);
+  else if (i.katki.state === "unavailable") reasons.push(i.katki.reason);
   else if (i.vault) {
     const listed = new Set(i.katki.wallets.map((w) => w.toLowerCase()));
     const stray = i.vault.recipients.filter((r) => !listed.has(r.recipient.toLowerCase()));
     if (stray.length) problems.push(`${stray.length} vault recipient${stray.length > 1 ? "s are" : " is"} not listed in .katki.json at the recorded commit.`);
   }
 
-  for (const [c, what] of [[i.provenance, "commit"], [i.handles, "handles"]] as const) {
+  for (const c of [i.provenance, i.handles]) {
     if (c.state === "mismatch") problems.push(c.detail);
-    else if (c.state === "unavailable") reasons.push(`The repository's ${what} could not be checked on GitHub (${c.reason}).`);
+    else if (c.state === "unavailable") reasons.push(c.reason);
   }
 
   if (problems.length) return { status: "mismatch", problems };
-  if (reasons.length) return { status: "unverifiable", reasons };
+  if (reasons.length) return { status: "unverifiable", reasons: [...new Set(reasons)] };
   return { status: "verified" };
 }
 

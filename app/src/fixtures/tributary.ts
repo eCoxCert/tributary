@@ -9,6 +9,7 @@ import type { AllocationRead } from "../lib/allocation";
 import { EXAMPLE_CONTRIBUTORS } from "../lib/examples";
 import { selectVaultRecipients } from "../lib/split";
 import { verifyLaunch } from "../lib/cardVerify";
+import { rateLimitMessage } from "../lib/github";
 import type { Card } from "../hooks/useChainData";
 import { splitByShares } from "../lib/allocation";
 import type { LaunchRecord } from "../lib/launches";
@@ -93,6 +94,18 @@ export async function fixtureCard(rec: LaunchRecord, loading: boolean): Promise<
   const mismatch = repo === "lumen-rs/evm-trace";
   const snap = mismatch ? real : { ...real, state: { ...real.state, creator: FIXTURE_OWNER }, config: { ...real.config, partnerRecipient: FIXTURE_VAULT, creatorShareOfNonProtocolBps: 0 } };
   const unavailable = repo === "pinecrest/gas-oracle-rs";
+  // token names match their repos; the unverifiable one carries a hostile name on purpose: it must never be shown as a repo
+  const label: Record<string, [string, string]> = {
+    "tidewater/quill-rpc": ["Quill", "QRPC"],
+    "pinecrest/gas-oracle-rs": ["facebook/react", "GASR"],
+    "lumen-rs/evm-trace": ["EVM Trace", "TRCE"],
+    "marlow-io/eip712-forms": ["EIP-712 Forms", "SIGN"],
+  };
+  const [tokName, tokSym] = label[repo] ?? [snap.name, snap.symbol];
+  const named = { ...snap, name: tokName, symbol: tokSym };
+  const until = Date.now() + 22 * 60_000;
+  if (unavailable) localStorage.setItem("trib:gh:limit", String(until)); // lets the listing show the "checks resume in N min" note
+  const why = rateLimitMessage(until, Date.now());
   const verified = verifyLaunch({
     meta: rec.meta!,
     partnerRecipient: snap.config.partnerRecipient,
@@ -100,11 +113,11 @@ export async function fixtureCard(rec: LaunchRecord, loading: boolean): Promise<
     creator: snap.state.creator,
     quoteToken: WETH,
     vault: fixtureVault("ok"),
-    katki: unavailable ? { state: "unavailable", reason: "rate limit" } : { state: "ok", wallets: EXAMPLE_CONTRIBUTORS.map((c) => c.wallet) },
-    provenance: unavailable ? { state: "unavailable", reason: "rate limit" } : { state: "ok" },
-    handles: unavailable ? { state: "unavailable", reason: "rate limit" } : { state: "ok" },
+    katki: unavailable ? { state: "unavailable", reason: why } : { state: "ok", wallets: EXAMPLE_CONTRIBUTORS.map((c) => c.wallet) },
+    provenance: unavailable ? { state: "unavailable", reason: why } : { state: "ok" },
+    handles: unavailable ? { state: "unavailable", reason: why } : { state: "ok" },
   });
-  return { rec, snap, vault: fixtureVault("ok"), timestamp: Date.now() - 3_600_000 * (1 + (rec.block % 20n === 0n ? 1 : 5)), verified };
+  return { rec, snap: named, vault: fixtureVault("ok"), timestamp: Date.now() - 3_600_000 * (1 + (rec.block % 20n === 0n ? 1 : 5)), verified };
 }
 
 export function fixtureAllocation(): AllocationRead {

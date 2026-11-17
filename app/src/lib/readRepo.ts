@@ -2,7 +2,7 @@
  * Everything the Create page learns from GitHub, in one pure-ish function (network through `Deps`).
  * Result stages mirror the prototype: error, missing .katki.json, invalid file, found.
  */
-import { getContributors, getHeadSha, getKatkiText, getRepoInfo, GitHubError, parseRepoInput, defaultDeps, type Deps, type RepoInfo, type RepoRef } from "./github";
+import { getContributorsInfo, getHeadSha, getKatkiText, getRepoInfo, GitHubError, parseRepoInput, defaultDeps, type Deps, type RepoInfo, type RepoRef } from "./github";
 import { checkAgainstHistory, missingFromFile, parseKatki, templateFor, type KatkiFile, type KatkiIssue, type RepoContributor } from "./katki";
 import { selectVaultRecipients, type VaultSelection } from "./split";
 
@@ -22,7 +22,7 @@ export type ReadResult =
       notInFile: RepoContributor[];
     };
 
-export async function readRepository(input: string, deps: Deps = defaultDeps()): Promise<ReadResult> {
+export async function readRepository(input: string, deps: Deps = { ...defaultDeps(), memo: undefined, ttl: 10 * 60 * 1000 }): Promise<ReadResult> {
   const ref = parseRepoInput(input);
   if (!ref) return { stage: "error", message: "Enter the repository as owner/name, for example tidewater/quill-rpc.", retryable: false };
   try {
@@ -33,7 +33,7 @@ export async function readRepository(input: string, deps: Deps = defaultDeps()):
     if (text === null) {
       let history: RepoContributor[] = [];
       try {
-        history = await getContributors(ref, deps);
+        history = (await getContributorsInfo(ref, deps)).list;
       } catch {
         /* the template falls back to a placeholder handle */
       }
@@ -41,9 +41,12 @@ export async function readRepository(input: string, deps: Deps = defaultDeps()):
     }
     const parsed = parseKatki(text);
     if (!parsed.ok) return { stage: "invalid", ref, info, sha, errors: parsed.errors, warnings: [] };
-    const history = await getContributors(ref, deps);
+    const { list: history, truncated } = await getContributorsInfo(ref, deps);
     const checked = checkAgainstHistory(parsed.file, history);
-    if (!checked.ok) return { stage: "invalid", ref, info, sha, errors: checked.errors, warnings: parsed.warnings };
+    if (!checked.ok) {
+      const errors = truncated ? [...checked.errors, { code: "truncated", message: "GitHub lists at most the 500 top contributors. Anyone outside that list cannot be weighed here yet." }] : checked.errors;
+      return { stage: "invalid", ref, info, sha, errors, warnings: parsed.warnings };
+    }
     return {
       stage: "found",
       ref,

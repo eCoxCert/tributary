@@ -93,38 +93,58 @@ export type Card = {
   verified: Verification | null;
 };
 
+/** Chain data only. The GitHub-backed verification is a separate, lazy query (see useCards). */
 async function readCard(rec: LaunchRecord): Promise<Card> {
   if (import.meta.env.DEV && fx()?.startsWith("list")) return (await import("../fixtures/tributary")).fixtureCard(rec, fx() === "list-loading");
-  const [snap, vault, block, katki] = await Promise.all([
+  const [snap, vault, block] = await Promise.all([
     readCurveSnapshot(rec.curve, rec.token),
     rec.meta ? readVaultSnapshot(rec.meta.vault).catch(() => null) : Promise.resolve(null),
     publicClient.getBlock({ blockNumber: rec.block }).catch(() => null),
-    rec.meta ? readKatkiState(rec.meta.repo, rec.meta.katkiCommit) : Promise.resolve(null),
   ]);
-  const verified = rec.meta && katki
-    ? verifyLaunch({
-        meta: rec.meta,
-        partnerRecipient: snap.config.partnerRecipient,
-        creatorShareOfNonProtocolBps: snap.config.creatorShareOfNonProtocolBps,
-        creator: snap.state.creator,
-        quoteToken: ADDR.weth,
-        vault,
-        katki: katki.state,
-        provenance: katki.provenance,
-        handles: katki.handles,
-      })
-    : null;
-  return { rec, snap, vault, timestamp: block ? Number(block.timestamp) * 1000 : null, verified };
+  return { rec, snap, vault, timestamp: block ? Number(block.timestamp) * 1000 : null, verified: null };
 }
 
-/** Live data for several launches. Each is its own query so one failure does not hide the others. */
-export function useCards(records: LaunchRecord[]) {
-  return useQueries({
-    queries: records.map((rec) => ({
-      queryKey: ["card", rec.curve],
-      queryFn: () => readCard(rec),
-      staleTime: 30_000,
+async function readVerification(card: Card): Promise<Verification> {
+  if (import.meta.env.DEV && fx()?.startsWith("list") && card.verified) return card.verified;
+  const { rec, snap, vault } = card;
+  const katki = await readKatkiState(rec.meta!.repo, rec.meta!.katkiCommit);
+  return verifyLaunch({
+    meta: rec.meta!,
+    partnerRecipient: snap.config.partnerRecipient,
+    creatorShareOfNonProtocolBps: snap.config.creatorShareOfNonProtocolBps,
+    creator: snap.state.creator,
+    quoteToken: ADDR.weth,
+    vault,
+    katki: katki.state,
+    provenance: katki.provenance,
+    handles: katki.handles,
+  });
+}
+
+/**
+ * Live data for several launches. Chain data loads for all of them; the verification (which spends GitHub requests)
+ * runs only for launches in `verifyFor` ("all" or a set of curve addresses that are on screen). Until a launch has
+ * been verified its result stays pending, so nothing about its repository is shown or counted.
+ */
+export function useCards(records: LaunchRecord[], verifyFor: "all" | ReadonlySet<string> = "all") {
+  const cardQs = useQueries({
+    queries: records.map((rec) => ({ queryKey: ["card", rec.curve], queryFn: () => readCard(rec), staleTime: 30_000 })),
+  });
+  const verifyQs = useQueries({
+    queries: records.map((rec, i) => ({
+      queryKey: ["verify", rec.curve, rec.meta?.katkiCommit],
+      enabled: !!rec.meta && !!cardQs[i]?.data && (verifyFor === "all" || verifyFor.has(rec.curve)),
+      queryFn: () => readVerification(cardQs[i]!.data as Card),
+      staleTime: 60_000,
+      retry: 0,
     })),
+  });
+  return records.map((rec, i) => {
+    const cq = cardQs[i]!;
+    const vq = verifyQs[i]!;
+    if (!rec.meta) return cq;
+    const ready = !!cq.data && !!vq.data;
+    return { ...cq, isPending: cq.isError ? false : !ready, data: ready ? { ...(cq.data as Card), verified: vq.data as Verification } : undefined, dataUpdatedAt: cq.dataUpdatedAt + vq.dataUpdatedAt } as typeof cq;
   });
 }
 

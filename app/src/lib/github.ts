@@ -1,7 +1,11 @@
 /**
- * Anonymous GitHub REST access (60 requests per hour per IP). Results are cached in sessionStorage.
- * The `.katki.json` file itself is read from raw.githubusercontent.com at a pinned commit, which does not count
- * against the API quota.
+ * Anonymous GitHub REST access (60 requests per hour per IP).
+ *  - Positive answers (ancestor = yes, contributor lists, repository records, file text) are cached in localStorage
+ *    for 6 hours. Negative answers and errors are never cached.
+ *  - Calls for one repo are shared on a page (memo).
+ *  - When the hourly limit is hit, the reset time is read from x-ratelimit-reset and no further request is sent
+ *    until then (global flag, also kept in storage).
+ *  - `.katki.json` itself is read from raw.githubusercontent.com at a pinned commit: no API quota.
  */
 import type { RepoContributor } from "./katki";
 
@@ -22,12 +26,21 @@ export type RepoInfo = { fullName: string; defaultBranch: string; stars: number;
 export type Deps = {
   /** In-flight and finished requests of this page, so one repo is asked once. */
   memo?: Map<string, Promise<unknown>>;
+  /** Shared "rate limited until" flag. */
+  limit?: { until: number | null };
+  /** Overrides the cache lifetime (the Create form wants fresh data). */
+  ttl?: number;
   fetch: typeof fetch;
   storage: Pick<Storage, "getItem" | "setItem"> | null;
   now: () => number;
 };
 
+export const TTL_LONG_MS = 6 * 60 * 60 * 1000;
+export const TTL_SHORT_MS = 10 * 60 * 1000;
+const LIMIT_KEY = "trib:gh:limit";
+
 const MEMO = new Map<string, Promise<unknown>>();
+const LIMIT: { until: number | null } = { until: null };
 
 async function once<T>(deps: Deps, key: string, fn: () => Promise<T>): Promise<T> {
   const m = deps.memo;
@@ -45,11 +58,11 @@ async function once<T>(deps: Deps, key: string, fn: () => Promise<T>): Promise<T
 export function defaultDeps(): Deps {
   let storage: Deps["storage"] = null;
   try {
-    storage = typeof sessionStorage !== "undefined" ? sessionStorage : null;
+    storage = typeof localStorage !== "undefined" ? localStorage : null;
   } catch {
     storage = null;
   }
-  return { fetch: (...a) => fetch(...a), storage, now: () => Date.now(), memo: MEMO };
+  return { fetch: (...a) => fetch(...a), storage, now: () => Date.now(), memo: MEMO, limit: LIMIT };
 }
 
 /** Accepts "owner/name", a github.com URL, with or without .git or a trailing slash. */
@@ -64,14 +77,12 @@ export function parseRepoInput(input: string): RepoRef | null {
   return { owner: m[1] as string, name: m[2] as string };
 }
 
-const CACHE_TTL_MS = 10 * 60 * 1000;
-
-function readCache<T>(deps: Deps, key: string): T | undefined {
+function readCache<T>(deps: Deps, key: string, long: boolean): T | undefined {
   try {
     const raw = deps.storage?.getItem(`trib:gh:${key}`);
     if (!raw) return undefined;
     const { t, v } = JSON.parse(raw) as { t: number; v: T };
-    if (deps.now() - t > CACHE_TTL_MS) return undefined;
+    if (deps.now() - t > (deps.ttl ?? (long ? TTL_LONG_MS : TTL_SHORT_MS))) return undefined;
     return v;
   } catch {
     return undefined;
@@ -85,7 +96,43 @@ function writeCache<T>(deps: Deps, key: string, v: T) {
   }
 }
 
-async function api(deps: Deps, path: string): Promise<Response> {
+/* ------------------------------------------------------------ rate limit */
+
+function limitUntil(deps: Deps): number | null {
+  const now = deps.now();
+  let until = deps.limit?.until ?? null;
+  if (until === null) {
+    try {
+      const raw = deps.storage?.getItem(LIMIT_KEY);
+      if (raw && Number.isFinite(Number(raw))) until = Number(raw);
+    } catch {
+      /* ignore */
+    }
+  }
+  return until !== null && until > now ? until : null;
+}
+function markLimited(deps: Deps, resetAt?: Date) {
+  const until = resetAt ? resetAt.getTime() : deps.now() + 60 * 60 * 1000;
+  if (deps.limit) deps.limit.until = until;
+  try {
+    deps.storage?.setItem(LIMIT_KEY, String(until));
+  } catch {
+    /* ignore */
+  }
+}
+export function rateLimitMessage(until: number, now: number): string {
+  const mins = Math.max(1, Math.ceil((until - now) / 60_000));
+  return `GitHub's hourly limit for this browser was reached — checks resume in ${mins} min.`;
+}
+/** Non-null while the limit is active: used for notes on the listing pages. */
+export function rateLimitNote(deps: Deps = defaultDeps()): string | null {
+  const u = limitUntil(deps);
+  return u === null ? null : rateLimitMessage(u, deps.now());
+}
+
+async function api(deps: Deps, path: string, allow: number[] = []): Promise<Response> {
+  const lim = limitUntil(deps);
+  if (lim !== null) throw new GitHubError("rate-limit", rateLimitMessage(lim, deps.now()), new Date(lim)); // no request while limited
   let res: Response;
   try {
     res = await deps.fetch(`https://api.github.com${path}`, { headers: { Accept: "application/vnd.github+json" } });
@@ -97,35 +144,37 @@ async function api(deps: Deps, path: string): Promise<Response> {
     if (remaining === "0" || res.status === 429) {
       const reset = Number(res.headers.get("x-ratelimit-reset"));
       const resetAt = Number.isFinite(reset) && reset > 0 ? new Date(reset * 1000) : undefined;
-      const when = resetAt ? ` The limit resets at ${resetAt.toISOString().slice(11, 16)} UTC.` : "";
-      throw new GitHubError("rate-limit", `GitHub allows 60 anonymous requests per hour from one network, and that limit is used up.${when} Results already loaded stay cached for this session.`, resetAt);
+      markLimited(deps, resetAt);
+      const until = limitUntil(deps) ?? deps.now() + 60_000;
+      throw new GitHubError("rate-limit", rateLimitMessage(until, deps.now()), resetAt);
     }
   }
+  if (allow.includes(res.status)) return res;
   if (res.status === 404) throw new GitHubError("not-found", "Repository not found, or it is private. Tributary can read public repositories only.");
   if (!res.ok) throw new GitHubError("bad-response", `GitHub answered with HTTP ${res.status}.`);
   return res;
 }
 
-export function getRepoInfo(ref: RepoRef, deps: Deps = defaultDeps()): Promise<RepoInfo> {
-  return once(deps, `info:${ref.owner}/${ref.name}`.toLowerCase(), () => getRepoInfoRaw(ref, deps));
-}
+/* ------------------------------------------------------------------ reads */
 
-async function getRepoInfoRaw(ref: RepoRef, deps: Deps): Promise<RepoInfo> {
-  const key = `repo:${ref.owner}/${ref.name}`.toLowerCase();
-  const hit = readCache<RepoInfo>(deps, key);
-  if (hit) return hit;
-  const res = await api(deps, `/repos/${ref.owner}/${ref.name}`);
-  const j = (await res.json()) as { full_name?: string; default_branch?: string; stargazers_count?: number; language?: string | null; private?: boolean; html_url?: string };
-  if (!j.full_name || !j.default_branch) throw new GitHubError("bad-response", "GitHub returned an unexpected repository record.");
-  const info: RepoInfo = { fullName: j.full_name, defaultBranch: j.default_branch, stars: j.stargazers_count ?? 0, language: j.language ?? null, isPrivate: j.private === true, htmlUrl: j.html_url ?? `https://github.com/${j.full_name}` };
-  writeCache(deps, key, info);
-  return info;
+export function getRepoInfo(ref: RepoRef, deps: Deps = defaultDeps()): Promise<RepoInfo> {
+  return once(deps, `info:${ref.owner}/${ref.name}`.toLowerCase(), async () => {
+    const key = `repo:${ref.owner}/${ref.name}`.toLowerCase();
+    const hit = readCache<RepoInfo>(deps, key, true);
+    if (hit) return hit;
+    const res = await api(deps, `/repos/${ref.owner}/${ref.name}`);
+    const j = (await res.json()) as { full_name?: string; default_branch?: string; stargazers_count?: number; language?: string | null; private?: boolean; html_url?: string };
+    if (!j.full_name || !j.default_branch) throw new GitHubError("bad-response", "GitHub returned an unexpected repository record.");
+    const info: RepoInfo = { fullName: j.full_name, defaultBranch: j.default_branch, stars: j.stargazers_count ?? 0, language: j.language ?? null, isPrivate: j.private === true, htmlUrl: j.html_url ?? `https://github.com/${j.full_name}` };
+    writeCache(deps, key, info);
+    return info;
+  });
 }
 
 /** Latest commit on the default branch: the pinned commit the file is read at and recorded with. */
 export async function getHeadSha(ref: RepoRef, branch: string, deps: Deps = defaultDeps()): Promise<string> {
   const key = `head:${ref.owner}/${ref.name}@${branch}`.toLowerCase();
-  const hit = readCache<string>(deps, key);
+  const hit = readCache<string>(deps, key, false);
   if (hit) return hit;
   const res = await api(deps, `/repos/${ref.owner}/${ref.name}/commits/${encodeURIComponent(branch)}`);
   const j = (await res.json()) as { sha?: string };
@@ -134,10 +183,10 @@ export async function getHeadSha(ref: RepoRef, branch: string, deps: Deps = defa
   return j.sha;
 }
 
-/** Reads `.katki.json` at a commit. Returns null when the file does not exist. */
+/** Reads `.katki.json` at a commit. Returns null when the file does not exist (that answer is not cached). */
 export async function getKatkiText(ref: RepoRef, sha: string, deps: Deps = defaultDeps()): Promise<string | null> {
   const key = `katki:${ref.owner}/${ref.name}@${sha}`.toLowerCase();
-  const hit = readCache<{ text: string | null }>(deps, key);
+  const hit = readCache<{ text: string }>(deps, key, true);
   if (hit) return hit.text;
   let res: Response;
   try {
@@ -145,65 +194,76 @@ export async function getKatkiText(ref: RepoRef, sha: string, deps: Deps = defau
   } catch {
     throw new GitHubError("network", "GitHub could not be reached. Check your connection and try again.");
   }
-  if (res.status === 404) {
-    writeCache(deps, key, { text: null });
-    return null;
-  }
+  if (res.status === 404) return null;
   if (!res.ok) throw new GitHubError("bad-response", `GitHub answered with HTTP ${res.status} while reading .katki.json.`);
   const text = await res.text();
   writeCache(deps, key, { text });
   return text;
 }
 
-/** Repo contributors with commit counts (login only; anonymous authors have no handle and are skipped). Up to 5 pages of 100. */
-export function getContributors(ref: RepoRef, deps: Deps = defaultDeps()): Promise<RepoContributor[]> {
-  return once(deps, `contrib:${ref.owner}/${ref.name}`.toLowerCase(), () => getContributorsRaw(ref, deps));
+export type ContributorList = { list: RepoContributor[]; /** The last page was full: there may be more contributors than listed (500 max). */ truncated: boolean };
+
+export function getContributorsInfo(ref: RepoRef, deps: Deps = defaultDeps()): Promise<ContributorList> {
+  return once(deps, `contrib:${ref.owner}/${ref.name}`.toLowerCase(), async () => {
+    const key = `contrib:${ref.owner}/${ref.name}`.toLowerCase();
+    const hit = readCache<ContributorList>(deps, key, true);
+    if (hit) return hit;
+    const list: RepoContributor[] = [];
+    let truncated = false;
+    for (let page = 1; page <= 5; page++) {
+      const res = await api(deps, `/repos/${ref.owner}/${ref.name}/contributors?per_page=100&page=${page}`);
+      const j = (await res.json()) as { login?: string; contributions?: number }[];
+      if (!Array.isArray(j)) throw new GitHubError("bad-response", "GitHub returned an unexpected contributor list.");
+      for (const c of j) if (c.login && typeof c.contributions === "number") list.push({ login: c.login, contributions: c.contributions });
+      if (j.length < 100) break;
+      if (page === 5) truncated = true;
+    }
+    const out = { list, truncated };
+    writeCache(deps, key, out);
+    return out;
+  });
 }
 
-async function getContributorsRaw(ref: RepoRef, deps: Deps): Promise<RepoContributor[]> {
-  const key = `contrib:${ref.owner}/${ref.name}`.toLowerCase();
-  const hit = readCache<RepoContributor[]>(deps, key);
-  if (hit) return hit;
-  const out: RepoContributor[] = [];
-  for (let page = 1; page <= 5; page++) {
-    const res = await api(deps, `/repos/${ref.owner}/${ref.name}/contributors?per_page=100&page=${page}`);
-    const j = (await res.json()) as { login?: string; contributions?: number; type?: string }[];
-    if (!Array.isArray(j)) throw new GitHubError("bad-response", "GitHub returned an unexpected contributor list.");
-    for (const c of j) if (c.login && typeof c.contributions === "number") out.push({ login: c.login, contributions: c.contributions });
-    if (j.length < 100) break;
-  }
-  writeCache(deps, key, out);
-  return out;
+/** Repo contributors with commit counts (anonymous authors have no handle and are skipped). */
+export async function getContributors(ref: RepoRef, deps: Deps = defaultDeps()): Promise<RepoContributor[]> {
+  return (await getContributorsInfo(ref, deps)).list;
+}
+
+/** Exact check for one handle when the contributor list was cut off: does this author have any commit? */
+export function hasCommitsBy(ref: RepoRef, handle: string, deps: Deps = defaultDeps()): Promise<boolean> {
+  const k = `by:${ref.owner}/${ref.name}:${handle}`.toLowerCase();
+  return once(deps, k, async () => {
+    const hit = readCache<boolean>(deps, k, true);
+    if (hit) return true;
+    const res = await api(deps, `/repos/${ref.owner}/${ref.name}/commits?author=${encodeURIComponent(handle)}&per_page=1`);
+    const j = (await res.json()) as unknown[];
+    if (!Array.isArray(j)) throw new GitHubError("bad-response", "GitHub returned an unexpected commit list.");
+    if (j.length > 0) writeCache(deps, k, true);
+    return j.length > 0;
+  });
 }
 
 /**
  * Is `sha` part of the default branch's history? (GET compare/{sha}...{branch}: "ahead" or "identical" means yes.)
- * "behind" / "diverged" / 404 mean the commit is not an ancestor, e.g. a fork's commit. Cached per (repo, sha).
+ * "behind" / "diverged" / 404 mean the commit is not an ancestor, e.g. a fork's commit.
+ * Only "yes" is cached, under a key that includes the branch.
  */
 export type AncestorCheck = "ancestor" | "not-ancestor";
 export function isAncestorOfDefault(ref: RepoRef, sha: string, branch: string, deps: Deps = defaultDeps()): Promise<AncestorCheck> {
-  const key = `anc:${ref.owner}/${ref.name}@${sha}`.toLowerCase();
+  const key = `anc:${ref.owner}/${ref.name}@${sha}->${branch}`.toLowerCase();
   return once(deps, key, async () => {
-    const hit = readCache<AncestorCheck>(deps, key);
-    if (hit) return hit;
+    if (readCache<AncestorCheck>(deps, key, true) === "ancestor") return "ancestor" as AncestorCheck;
     let res: Response;
     try {
-      res = await deps.fetch(`https://api.github.com/repos/${ref.owner}/${ref.name}/compare/${sha}...${encodeURIComponent(branch)}`, { headers: { Accept: "application/vnd.github+json" } });
-    } catch {
-      throw new GitHubError("network", "GitHub could not be reached.");
+      res = await api(deps, `/repos/${ref.owner}/${ref.name}/compare/${sha}...${encodeURIComponent(branch)}`, [422]);
+    } catch (e) {
+      if (e instanceof GitHubError && e.kind === "not-found") return "not-ancestor" as AncestorCheck;
+      throw e;
     }
-    if (res.status === 404 || res.status === 422) {
-      writeCache(deps, key, "not-ancestor");
-      return "not-ancestor" as AncestorCheck;
-    }
-    if (res.status === 403 || res.status === 429) {
-      const reset = Number(res.headers.get("x-ratelimit-reset"));
-      throw new GitHubError("rate-limit", "GitHub's anonymous request limit is used up.", Number.isFinite(reset) && reset > 0 ? new Date(reset * 1000) : undefined);
-    }
-    if (!res.ok) throw new GitHubError("bad-response", `GitHub answered with HTTP ${res.status}.`);
+    if (res.status === 422) return "not-ancestor" as AncestorCheck;
     const j = (await res.json()) as { status?: string };
     const out: AncestorCheck = j.status === "ahead" || j.status === "identical" ? "ancestor" : "not-ancestor";
-    writeCache(deps, key, out);
+    if (out === "ancestor") writeCache(deps, key, out);
     return out;
   });
 }

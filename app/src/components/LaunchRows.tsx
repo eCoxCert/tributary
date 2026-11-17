@@ -1,9 +1,10 @@
+import { useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { Av, Sk, StatusTag, type LaunchStatus } from "./ui";
 import { fmt } from "../lib/format";
 import type { Card } from "../hooks/useChainData";
-import { isListedVerdict } from "../lib/visibility";
+import { isListedVerdict, rowTitle } from "../lib/visibility";
 import type { LaunchRecord } from "../lib/launches";
 
 export function statusOf(card: Card): LaunchStatus {
@@ -29,7 +30,8 @@ export function isListed(card: Card, debug: boolean): boolean {
 }
 
 export type RowModel = {
-  title: string; // owner/name or token symbol
+  title: string; // owner/name (verified rows only) or symbol + short token address
+  repo: boolean; // true only when `title` is the verified repo from metadata
   status: LaunchStatus;
   pct: number;
   left: string;
@@ -52,7 +54,8 @@ export function rowModel(card: Card): RowModel {
   const fees = vault ? `${fmt.eth(vault.totalFunded + vault.pendingInFeeVault)} ETH` : null;
   const age = timestamp ? fmt.ago(timestamp) : null;
   return {
-    title: card.verified?.status === "verified" && rec.meta ? rec.meta.repo : snap.name,
+    title: rowTitle(card.verified?.status === "verified" ? rec.meta?.repo ?? null : null, snap.symbol, rec.token),
+    repo: card.verified?.status === "verified" && !!rec.meta,
     status: st,
     pct: st === "grad" ? 100 : pct,
     left,
@@ -61,18 +64,40 @@ export function rowModel(card: Card): RowModel {
     unchecked: card.verified?.status === "unverifiable",
     symbol: snap.symbol,
     name: snap.name,
-    sub: [!rec.meta ? "Not a Tributary launch" : card.verified?.status === "mismatch" ? "Does not follow Tributary rules" : card.verified?.status === "unverifiable" ? "Could not be checked" : null, age].filter(Boolean).join(" · "),
+    sub: [!rec.meta ? "Not a Tributary launch" : null, age].filter(Boolean).join(" · "),
   };
 }
 
-export function LaunchRow({ rec, q, debug }: { rec: LaunchRecord; q: UseQueryResult<Card>; debug?: boolean }) {
+function useVisible(onVisible?: () => void) {
+  const ref = useRef<HTMLTableRowElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || !onVisible) return;
+    if (typeof IntersectionObserver === "undefined") {
+      onVisible();
+      return;
+    }
+    const io = new IntersectionObserver((es) => {
+      if (es.some((e) => e.isIntersecting)) {
+        onVisible();
+        io.disconnect();
+      }
+    });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [onVisible]);
+  return ref;
+}
+
+export function LaunchRow({ rec, q, debug, onVisible }: { rec: LaunchRecord; q: UseQueryResult<Card>; debug?: boolean; onVisible?: () => void }) {
   const nav = useNavigate();
+  const rowRef = useVisible(onVisible);
   const to = `/launch/${rec.token}${debug ? "?all=1" : ""}`;
   const title = fmt.short(rec.token); // never the repo from metadata until the chain and the repository agree
 
   if (q.isPending) {
     return (
-      <tr>
+      <tr ref={rowRef}>
         <td className="c-repo">
           <div className="repo">
             <Av seed={rec.token} tone="ink" />
@@ -94,7 +119,7 @@ export function LaunchRow({ rec, q, debug }: { rec: LaunchRecord; q: UseQueryRes
   }
   if (q.isError || !q.data) {
     return (
-      <tr>
+      <tr ref={rowRef}>
         <td className="c-repo full" colSpan={7}>
           <div className="repo">
             <Av seed={title} tone="ink" />
@@ -108,9 +133,10 @@ export function LaunchRow({ rec, q, debug }: { rec: LaunchRecord; q: UseQueryRes
     );
   }
   const m = rowModel(q.data);
-  const [owner2, name2] = m.title.includes("/") ? (m.title.split("/") as [string, string]) : ["", m.title];
+  // only a verified repo from the launch metadata is ever formatted as owner/name; a token name or symbol never is
+  const [owner2, name2] = m.repo && m.title.includes("/") ? (m.title.split("/") as [string, string]) : ["", m.title];
   return (
-    <tr className="is-link" onClick={(e) => { if (!(e.target as HTMLElement).closest("a,button")) nav(to); }}>
+    <tr ref={rowRef} className="is-link" onClick={(e) => { if (!(e.target as HTMLElement).closest("a,button")) nav(to); }}>
       <td className="c-repo">
         <div className="repo">
           <Av seed={title} tone="ink" />
@@ -155,5 +181,33 @@ export function LaunchesHead() {
         <th>Status</th>
       </tr>
     </thead>
+  );
+}
+
+/** Loading rows that use the same cell classes as real rows, so the columns line up. */
+export function LaunchSkeletonRows({ rows }: { rows: number }) {
+  return (
+    <>
+      {Array.from({ length: rows }, (_, i) => (
+        <tr key={i}>
+          <td className="c-repo">
+            <div className="repo">
+              <span className="av" />
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <Sk w={`${55 + ((i * 13) % 25)}%`} />
+                <div style={{ height: 6 }} />
+                <Sk w="35%" h={10} />
+              </div>
+            </div>
+          </td>
+          <td data-k="Token" className="c-tok"><Sk w="60%" /></td>
+          <td data-k="Curve" className="c-curve"><Sk w="80%" /></td>
+          <td data-k="To graduation" className="r c-left"><Sk w="60%" /></td>
+          <td data-k="Contributors" className="r c-contrib"><Sk w="30%" /></td>
+          <td data-k="Fees earned" className="r c-fees"><Sk w="60%" /></td>
+          <td className="c-status"><Sk w={64} /></td>
+        </tr>
+      ))}
+    </>
   );
 }
