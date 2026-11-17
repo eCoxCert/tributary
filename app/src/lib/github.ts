@@ -5,9 +5,9 @@
  *  - Calls for one repo are shared on a page (memo).
  *  - When the hourly limit is hit, the reset time is read from x-ratelimit-reset and no further request is sent
  *    until then (global flag, also kept in storage).
- *  - `.katki.json` itself is read from raw.githubusercontent.com at a pinned commit: no API quota.
+ *  - `.tributary.json` itself is read from raw.githubusercontent.com at a pinned commit: no API quota.
  */
-import type { RepoContributor } from "./katki";
+import type { RepoContributor } from "./contribFile";
 
 export class GitHubError extends Error {
   constructor(
@@ -184,19 +184,19 @@ export async function getHeadSha(ref: RepoRef, branch: string, deps: Deps = defa
   return j.sha;
 }
 
-/** Reads `.katki.json` at a commit. Returns null when the file does not exist (that answer is not cached). */
-export async function getKatkiText(ref: RepoRef, sha: string, deps: Deps = defaultDeps()): Promise<string | null> {
-  const key = `katki:${ref.owner}/${ref.name}@${sha}`.toLowerCase();
+/** Reads `.tributary.json` at a commit. Returns null when the file does not exist (that answer is not cached). */
+export async function getContribFileText(ref: RepoRef, sha: string, deps: Deps = defaultDeps()): Promise<string | null> {
+  const key = `contribFile:${ref.owner}/${ref.name}@${sha}`.toLowerCase();
   const hit = readCache<{ text: string }>(deps, key, true);
   if (hit) return hit.text;
   let res: Response;
   try {
-    res = await deps.fetch(`https://raw.githubusercontent.com/${ref.owner}/${ref.name}/${sha}/.katki.json`);
+    res = await deps.fetch(`https://raw.githubusercontent.com/${ref.owner}/${ref.name}/${sha}/.tributary.json`);
   } catch {
     throw new GitHubError("network", "GitHub could not be reached. Check your connection and try again.");
   }
   if (res.status === 404) return null;
-  if (!res.ok) throw new GitHubError("bad-response", `GitHub answered with HTTP ${res.status} while reading .katki.json.`);
+  if (!res.ok) throw new GitHubError("bad-response", `GitHub answered with HTTP ${res.status} while reading .tributary.json.`);
   const text = await res.text();
   writeCache(deps, key, { text });
   return text;

@@ -42,7 +42,7 @@ export type VaultSelection =
   | { ok: true; included: Allocated[]; excluded: Weighted[]; totalCommitsIncluded: number }
   | { ok: false; reason: string; included: Allocated[]; excluded: Weighted[]; totalCommitsIncluded: number };
 
-/** Picks the vault recipients out of the validated `.katki.json` contributors. */
+/** Picks the vault recipients out of the validated `.tributary.json` contributors. */
 export function selectVaultRecipients(eligible: readonly Weighted[]): VaultSelection {
   const ranked = rankByCommits(eligible.filter((e) => e.commits > 0));
   const top = ranked.slice(0, MAX_RECIPIENTS);
@@ -51,7 +51,7 @@ export function selectVaultRecipients(eligible: readonly Weighted[]): VaultSelec
   if (top.length < MIN_RECIPIENTS) {
     return {
       ok: false,
-      reason: `A fee vault needs at least ${MIN_RECIPIENTS} contributors who are in .katki.json and have commits. This repository has ${top.length}.`,
+      reason: `A fee vault needs at least ${MIN_RECIPIENTS} contributors who are in .tributary.json and have commits. This repository has ${top.length}.`,
       included: [],
       excluded: [...top, ...excluded],
       totalCommitsIncluded: 0,
@@ -72,7 +72,7 @@ export type RecipientPlan =
 export function planRecipients(eligible: readonly Weighted[]): RecipientPlan {
   const ranked = rankByCommits(eligible.filter((e) => e.commits > 0));
   if (ranked.length === 0) {
-    return { ok: false, reason: "No listed contributor has both commits in this repository and a wallet in .katki.json, so there is nobody to pay.", included: [], excluded: [], totalCommitsIncluded: 0 };
+    return { ok: false, reason: "No listed contributor has both commits in this repository and a wallet in .tributary.json, so there is nobody to pay.", included: [], excluded: [], totalCommitsIncluded: 0 };
   }
   if (ranked.length === 1) {
     const only = ranked[0] as Weighted;

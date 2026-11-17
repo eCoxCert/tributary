@@ -5,7 +5,7 @@
  *  - vault owner = the wallet that opens the launch (no platform wallet);
  *  - Config partner recipient = the vault, creator share 0 (all non-protocol fees go to the vault);
  *  - the vault holds WETH only, so the Config collects fees in the quote token;
- *  - `metadataURI` carries { app, repo, katkiCommit, vault }.
+ *  - `metadataURI` carries { app, repo, fileCommit, vault }.
  */
 import { encodePacked, keccak256, type Address, type Hex, type PublicClient } from "viem";
 import {
@@ -25,7 +25,7 @@ import { estimateFirstBuy } from "./curveMath";
 export type CreateInput = {
   owner: Address;
   repo: string;
-  katkiCommit: string;
+  fileCommit: string;
   recipients: { wallet: Address; bps: number }[];
   name: string;
   symbol: string;
@@ -67,7 +67,7 @@ const ZERO = "0x0000000000000000000000000000000000000000";
 /** The salt depends on everything that defines the split, so the same inputs always give the same vault (re-runs resume). */
 export function vaultSalt(input: CreateInput): Hex {
   const parts = input.recipients.map((r) => `${r.wallet.toLowerCase()}:${r.bps}`).join(",");
-  return keccak256(encodePacked(["string"], [`tributary/${input.repo.toLowerCase()}/${input.katkiCommit}/${input.owner.toLowerCase()}/${parts}`]));
+  return keccak256(encodePacked(["string"], [`tributary/${input.repo.toLowerCase()}/${input.fileCommit}/${input.owner.toLowerCase()}/${parts}`]));
 }
 
 /** Template Config with Tributary's overrides. Pure, so it can be tested without a chain. */
@@ -83,10 +83,10 @@ export function composeConfig(t: AmmoraV4Config, owner: Address, feeRecipient: A
 }
 
 /** Config and metadata for one launch; the vault named in the metadata is the Config's fee recipient. */
-export function assembleLaunch(input: Pick<CreateInput, "owner" | "repo" | "katkiCommit">, template: AmmoraV4Config, target: { vault: Address } | { recipient: Address }) {
+export function assembleLaunch(input: Pick<CreateInput, "owner" | "repo" | "fileCommit">, template: AmmoraV4Config, target: { vault: Address } | { recipient: Address }) {
   const feeRecipient = "vault" in target ? target.vault : target.recipient;
   const meta = "vault" in target ? { vault: target.vault } : { recipient: target.recipient };
-  return { config: composeConfig(template, input.owner, feeRecipient), metadataURI: encodeTributaryMetadata({ repo: input.repo, katkiCommit: input.katkiCommit, ...meta } as Parameters<typeof encodeTributaryMetadata>[0]) };
+  return { config: composeConfig(template, input.owner, feeRecipient), metadataURI: encodeTributaryMetadata({ repo: input.repo, fileCommit: input.fileCommit, ...meta } as Parameters<typeof encodeTributaryMetadata>[0]) };
 }
 
 export async function buildCreatePlan(input: CreateInput, client: PublicClient = publicClient): Promise<CreatePlan> {

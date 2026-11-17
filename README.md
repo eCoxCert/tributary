@@ -1,3 +1,3 @@
 # Contributor Launchpad (Ammora SDK)
 
-GitHub reposu icin token launch: erken alim katkicilara acik, islem ucretleri katki payina gore bolunur.
+Token launches for GitHub repos: early buying is open to contributors, and trading fees are split by commit share.

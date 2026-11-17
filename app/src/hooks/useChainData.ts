@@ -17,7 +17,7 @@ import {
 import { humanizeError } from "../lib/errors";
 import type { Verification } from "../lib/verify";
 import { verifyLaunch } from "../lib/cardVerify";
-import { readKatkiState } from "../lib/katkiCheck";
+import { readContribFileState } from "../lib/contribFileCheck";
 import { ADDR } from "../lib/chain";
 import { sampleCurve, curveTotals, humanPrice } from "../lib/curveMath";
 import { scanRanges, splitRangesNewestFirst } from "../lib/logs";
@@ -112,7 +112,7 @@ async function readCard(rec: LaunchRecord): Promise<Card> {
 async function readVerification(card: Card): Promise<Verification> {
   if (import.meta.env.DEV && fx()?.startsWith("list") && card.verified) return card.verified;
   const { rec, snap, vault } = card;
-  const katki = await readKatkiState(rec.meta!.repo, rec.meta!.katkiCommit);
+  const contribFile = await readContribFileState(rec.meta!.repo, rec.meta!.fileCommit);
   return verifyLaunch({
     meta: rec.meta!,
     partnerRecipient: snap.config.partnerRecipient,
@@ -120,9 +120,9 @@ async function readVerification(card: Card): Promise<Verification> {
     creator: snap.state.creator,
     quoteToken: ADDR.weth,
     vault,
-    katki: katki.state,
-    provenance: katki.provenance,
-    handles: katki.handles,
+    contribFile: contribFile.state,
+    provenance: contribFile.provenance,
+    handles: contribFile.handles,
   });
 }
 
@@ -137,7 +137,7 @@ export function useCards(records: LaunchRecord[], verifyFor: "all" | ReadonlySet
   });
   const verifyQs = useQueries({
     queries: records.map((rec, i) => ({
-      queryKey: ["verify", rec.curve, rec.meta?.katkiCommit],
+      queryKey: ["verify", rec.curve, rec.meta?.fileCommit],
       enabled: !!rec.meta && !!cardQs[i]?.data && (verifyFor === "all" || verifyFor.has(rec.curve)),
       queryFn: () => readVerification(cardQs[i]!.data as Card),
       staleTime: 60_000,

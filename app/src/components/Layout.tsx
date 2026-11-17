@@ -15,7 +15,7 @@ const Mark = () => (
 const links: [string, string][] = [
   ["/launches", "Launches"],
   ["/create", "Launch a repo"],
-  ["/katki", ".katki.json"],
+  ["/format", ".tributary.json"],
 ];
 
 export function Layout({ children }: { children: ReactNode }) {
@@ -123,7 +123,7 @@ export function Layout({ children }: { children: ReactNode }) {
               <ul>
                 <li><Link to="/launches">Launches</Link></li>
                 <li><Link to="/create">Launch a repo</Link></li>
-                <li><Link to="/katki">.katki.json format</Link></li>
+                <li><Link to="/format">.tributary.json format</Link></li>
               </ul>
             </div>
             <div>

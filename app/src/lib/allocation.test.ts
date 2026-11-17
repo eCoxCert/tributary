@@ -31,13 +31,13 @@ function res(status: number, body: unknown, h: Record<string, string> = {}) {
   return new Response(typeof body === "string" ? body : JSON.stringify(body), { status, headers: h });
 }
 const W = (c: string) => "0x" + c.repeat(40);
-function deps(katki: string | null, contributors: unknown[]): Deps {
+function deps(contribFile: string | null, contributors: unknown[]): Deps {
   return {
     storage: null,
     now: () => 0,
     fetch: async (u) => {
       const url = String(u);
-      if (url.includes("raw.githubusercontent")) return katki === null ? res(404, "") : res(200, katki);
+      if (url.includes("raw.githubusercontent")) return contribFile === null ? res(404, "") : res(200, contribFile);
       if (url.includes("/contributors")) return res(200, contributors);
       if (url.includes("/commits/")) return res(200, { sha: "a".repeat(40) });
       return res(200, { full_name: "o/r", default_branch: "main", private: false });

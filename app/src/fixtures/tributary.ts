@@ -4,7 +4,7 @@
  * allocation) is invented. */
 import type { Address } from "viem";
 import { readCurveSnapshot, type VaultSnapshot } from "../lib/launches";
-import type { LaunchData, KatkiInfo } from "../hooks/useLaunch";
+import type { LaunchData, ContribFileInfo } from "../hooks/useLaunch";
 import type { AllocationRead } from "../lib/allocation";
 import { EXAMPLE_CONTRIBUTORS } from "../lib/examples";
 import { selectVaultRecipients } from "../lib/split";
@@ -39,7 +39,7 @@ export async function fixtureLaunch(kind: string): Promise<LaunchData> {
   const snap = good
     ? { ...real, state: { ...real.state, creator: FIXTURE_OWNER, partnerRecipient: partner, feeVault: FEE_STORE }, config: { ...real.config, partnerRecipient: partner, creatorShareOfNonProtocolBps: 0 } }
     : real; // mismatch: the real config names someone else and gives the creator 30% of the fee
-  return { token: FIXTURE_TOKEN, curve: FIXTURE_CURVE, snap, meta: isDirect ? { app: "tributary", repo: "proxycox/solo-tool", katkiCommit: SHA, recipient: DIRECT_WALLET } : { app: "tributary", repo: "tidewater/quill-rpc", katkiCommit: SHA, vault: FIXTURE_VAULT } };
+  return { token: FIXTURE_TOKEN, curve: FIXTURE_CURVE, snap, meta: isDirect ? { app: "tributary", repo: "proxycox/solo-tool", fileCommit: SHA, recipient: DIRECT_WALLET } : { app: "tributary", repo: "tidewater/quill-rpc", fileCommit: SHA, vault: FIXTURE_VAULT } };
 }
 
 export function fixtureVault(kind: string): VaultSnapshot {
@@ -60,8 +60,8 @@ export function fixtureVault(kind: string): VaultSnapshot {
   };
 }
 
-export const fixtureInfoAsync = async (kind: string): Promise<KatkiInfo> => {
-  if (kind === "checking") return new Promise<KatkiInfo>(() => {});
+export const fixtureInfoAsync = async (kind: string): Promise<ContribFileInfo> => {
+  if (kind === "checking") return new Promise<ContribFileInfo>(() => {});
   return fixtureInfo(kind);
 };
 
@@ -69,10 +69,10 @@ export function fixtureDirect(): DirectSnapshot {
   return { recipient: DIRECT_WALLET, feeVault: FEE_STORE, pending: 31_000_000_000_000_000n };
 }
 
-export const fixtureInfo = (kind: string): KatkiInfo => (kind === "direct" ? fixtureDirectInfo : fixtureInfoBase(kind));
+export const fixtureInfo = (kind: string): ContribFileInfo => (kind === "direct" ? fixtureDirectInfo : fixtureInfoBase(kind));
 
-const fixtureDirectInfo: KatkiInfo = {
-  katki: { state: "ok", wallets: [DIRECT_WALLET] },
+const fixtureDirectInfo: ContribFileInfo = {
+  contribFile: { state: "ok", wallets: [DIRECT_WALLET] },
   provenance: { state: "ok" },
   handles: { state: "ok" },
   file: { version: 1, contributors: [{ github: "mira-k", wallet: DIRECT_WALLET }] },
@@ -81,8 +81,8 @@ const fixtureDirectInfo: KatkiInfo = {
   notes: [],
 };
 
-const fixtureInfoBase = (kind: string): KatkiInfo => ({
-  katki: kind === "unverifiable" ? { state: "unavailable", reason: "rate limit" } : { state: "ok", wallets: EXAMPLE_CONTRIBUTORS.map((c) => c.wallet) },
+const fixtureInfoBase = (kind: string): ContribFileInfo => ({
+  contribFile: kind === "unverifiable" ? { state: "unavailable", reason: "rate limit" } : { state: "ok", wallets: EXAMPLE_CONTRIBUTORS.map((c) => c.wallet) },
   provenance: kind === "unverifiable" ? { state: "unavailable", reason: "rate limit" } : { state: "ok" },
   handles: kind === "unverifiable" ? { state: "unavailable", reason: "rate limit" } : { state: "ok" },
   file: { version: 1, contributors: EXAMPLE_CONTRIBUTORS.map((c) => ({ github: c.github, wallet: c.wallet as `0x${string}` })) },
@@ -103,7 +103,7 @@ export const fixtureRecord: LaunchRecord = {
 
 export function fixtureRecords(real: LaunchRecord[]): LaunchRecord[] {
   const names = ["tidewater/quill-rpc", "pinecrest/gas-oracle-rs", "lumen-rs/evm-trace", "marlow-io/eip712-forms"];
-  return real.slice(0, 4).map((r, i) => ({ ...r, meta: { app: "tributary" as const, repo: names[i]!, katkiCommit: SHA, vault: FIXTURE_VAULT } }));
+  return real.slice(0, 4).map((r, i) => ({ ...r, meta: { app: "tributary" as const, repo: names[i]!, fileCommit: SHA, vault: FIXTURE_VAULT } }));
 }
 
 /** Card for the list fixtures: quill-rpc and eip712-forms verified, gas-oracle-rs unverifiable (GitHub rate limit), evm-trace mismatch (hidden). */
@@ -133,7 +133,7 @@ export async function fixtureCard(rec: LaunchRecord, loading: boolean): Promise<
     creator: snap.state.creator,
     quoteToken: WETH,
     vault: fixtureVault("ok"),
-    katki: unavailable ? { state: "unavailable", reason: why } : { state: "ok", wallets: EXAMPLE_CONTRIBUTORS.map((c) => c.wallet) },
+    contribFile: unavailable ? { state: "unavailable", reason: why } : { state: "ok", wallets: EXAMPLE_CONTRIBUTORS.map((c) => c.wallet) },
     provenance: unavailable ? { state: "unavailable", reason: why } : { state: "ok" },
     handles: unavailable ? { state: "unavailable", reason: why } : { state: "ok" },
   });

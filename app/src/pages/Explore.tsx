@@ -128,7 +128,7 @@ export function Explore() {
                       <p>
                         {debug
                           ? "The factory emitted no LaunchCreated events in the scanned range. Look further back below."
-                          : "A launch appears here once someone creates one from a repository with a .katki.json. Be the first."}
+                          : "A launch appears here once someone creates one from a repository with a .tributary.json. Be the first."}
                       </p>
                       {!debug && <Link className="btn btn-sm" to="/create">Launch your repo</Link>}
                     </div>

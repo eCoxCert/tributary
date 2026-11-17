@@ -111,7 +111,7 @@ Segmentler: `AmmoraV4Segment {lowerSqrtPrice, upperSqrtPrice, liquidity}` (d.ts:
 
 **Claim akışı (özet):** (a) Alıcı i: `DFSClient.getClaimPreview(i)` (gross) -> `planClaim(i, receiver?)`; (b) kasaya para girmeden `claimable` 0'dır; (c) `getState()` alıcı/paylaşım/`claimable` döner; doğrulama için `fees:verify-claim` (FS.md:208). Yuvarlama ve transfer ücreti net tutarı etkiler (FS.md:199).
 
-**Ürün akışını bozan sonuç (özet):** >5 katkıcı tek kasaya sığmaz. Seçenekler (karar şefte): ilk 4 + "diğerleri" kovası (platform cüzdanı manuel dağıtır), iç içe kasa (bir alıcı başka kasa olursa kasa kasayı claim edebilir mi doğrulanamadı), ya da repo başına birden fazla vault + Config (Config tek partner alıcı kabul ettiği için çalışmaz).
+**Ürün akışını bozan sonuç (özet):** >5 katılımcı tek kasaya sığmaz. Seçenekler (karar şefte): ilk 4 + "diğerleri" kovası (platform cüzdanı manuel dağıtır), iç içe kasa (bir alıcı başka kasa olursa kasa kasayı claim edebilir mi doğrulanamadı), ya da repo başına birden fazla vault + Config (Config tek partner alıcı kabul ettiği için çalışmaz).
 
 ## 4. Erken erişim kısıtı (ilk N blok/saniye yalnız allowlist)
 
@@ -123,12 +123,12 @@ Segmentler: `AmmoraV4Segment {lowerSqrtPrice, upperSqrtPrice, liquidity}` (d.ts:
 - `createLaunchAndCall` + özel callback: callback factory'de onaylı olmalı (LP.md:31 "custom callback needs shared code admission"). Zincir testi [ONAYLI, adım 7c]: onaysız rastgele callback `isLaunchCallbackApproved=false` ve `createLaunchAndCall` **revert** (neden verisi boş); yalnız `firstBuyExecutor` onaylı. Ayrıca callback yalnız launch anında bir kez çalışır, sonraki alımları kısıtlayamaz.
 
 **En yakın alternatifler (güçlüden zayıfa):**
-1. **Atomik ilk alım (1-2 giriş):** `planExistingConfigAtomicFirstBuy` / `createConfigAndPoolWithFirstBuy`; `firstBuys[].recipient` herhangi bir adres (d.ts:53284, js:22409: "one or two entries"). Launch ile aynı tx'te en fazla 2 alıcıya token dağıtır; N katkıcıya yetmez.
+1. **Atomik ilk alım (1-2 giriş):** `planExistingConfigAtomicFirstBuy` / `createConfigAndPoolWithFirstBuy`; `firstBuys[].recipient` herhangi bir adres (d.ts:53284, js:22409: "one or two entries"). Launch ile aynı tx'te en fazla 2 alıcıya token dağıtır; N katılımcıya yetmez.
 2. **Frontend düzeyi kısıt:** yalnız arayüz; zincirde zorunlu değil, herkes curve'ü doğrudan çağırabilir (`swapExactInput`). "Kısıt" demek yanıltıcı olur.
 3. **Restricted market:** zincirde zorunlu, ama ayrı bir havuz (launch curve yerine), eligibility adapter kontratı yazma/onaylama ve fabrika sahibi yetkisi gerektirir; dağıtım yok/doğrulanamadı.
 4. **Presale + merkle allowlist:** `buildCreateAmmoraPresale`, `buildCreateMerkleAmmoraPresaleEscrow(registryIndex, depositMaximumCap, proof)`, `buildCreateAmmoraPresaleMerkleRootConfig(version, root)` (d.ts:65218-65240) allowlist'li ön satış sağlar; **fabrika adresi SDK'da yok**, dağıtım doğrulanamadı.
 
-Sonuç: ürün gereksinimi "ilk N saniye yalnız katkıcılar alabilir" launch curve ile **zincirde sağlanamıyor**; şef kararı gerekli (kısıtı kaldırmak, atomik 1-2 ilk alım, ya da Ammora ekibinden restricted-market/presale dağıtımı).
+Sonuç: ürün gereksinimi "ilk N saniye yalnız katılımcılar alabilir" launch curve ile **zincirde sağlanamıyor**; şef kararı gerekli (kısıtı kaldırmak, atomik 1-2 ilk alım, ya da Ammora ekibinden restricted-market/presale dağıtımı).
 
 ## 5. Al/sat, teklif, mezuniyet
 
@@ -267,7 +267,7 @@ declare function parseAmmoraTokenLockCreatedReceipt(receipt: AmmoraTokenVestingR
 declare function commitsToBps(commits: Record<string, number>): Record<string, number>;
 ```
 
-Ürünün `.katki.json` -> vault: `contributors` anahtarları GitHub kullanıcı adı, değerleri adres; ağırlık = GitHub commit sayısı oranı -> `commitsToBps` -> `recipients[i] = { recipient: addr, share: BigInt(bps) }` (2-5 kişi sınırı!).
+Ürünün `.tributary.json` -> vault: `contributors` anahtarları GitHub kullanıcı adı, değerleri adres; ağırlık = GitHub commit sayısı oranı -> `commitsToBps` -> `recipients[i] = { recipient: addr, share: BigInt(bps) }` (2-5 kişi sınırı!).
 
 ## 9. Script çıktısı özeti (17 Kas 2026)
 
@@ -285,7 +285,7 @@ declare function commitsToBps(commits: Record<string, number>): Record<string, n
 ## 10. Açık sorunlar ve engeller
 
 1. **Erken erişim (Soru 4):** curve'e bağlanabilen bir allowlist/guard yok. En fazla 1-2 kişiye atomik ilk alım var. Ürün kararı gerekli.
-2. **Alıcı sayısı (Soru 3):** DFS 2-5 alıcı. Tüm katkıcılar sığmaz; birleştirme kuralı (ilk 4 + diğerleri) şef kararı.
+2. **Alıcı sayısı (Soru 3):** DFS 2-5 alıcı. Tüm katılımcılar sığmaz; birleştirme kuralı (ilk 4 + diğerleri) şef kararı.
 3. **Ücret otomasyonu (Soru 3):** kasa Partner yapılabiliyor (simülasyon başarılı) ve `fundFromClaimSource` yolu SDK'da var, ama gerçek kasada uçtan uca canlı doğrulama yapılmadı (işlem + ücret birikimi gerekir). Mezuniyet sonrası LP ücretleri için kasayı NFT sahibi yapmak riskli; LP partner = platform cüzdanı önerilir.
 4. **Repo başına Config + kasa:** ücret alıcısı Config içinde sabit; her repo yeni Config (~490k gaz) + yeni kasa demek. Config kaydı `nextConfigId` ile herkese açık ve geri alınamaz.
 5. **Data API kapalı:** liste/detay için yanıt şekli doğrulanamadı; üretimde zincir yedeği (LaunchCreated + getStateAtBlock) gerekir. SDK istemcisi 503'te yanıltıcı hata veriyor.
@@ -299,13 +299,13 @@ declare function commitsToBps(commits: Record<string, number>): Record<string, n
 - **Kurucu payı kilidi:** Config'in gömülü vesting'i (`lockedBaseVesting`, mezuniyette başlar, alıcı = launch creator) seçildi; TokenLock bağımsız yolu kullanılmadı. Gerekçe: ek işlem ve approve gerektirmez, kilit launch'ın parçasıdır. **Uygulamada kurucu payı henüz sunulmuyor:** Config #30 şablonunun segmentleri arzın tamamını kullanıyor, kilit için arzdan pay ayırmak `buildPortableAmmoraV4Config` ile yeni eğri hesabı ister (denenmedi). Config'te `lockedBaseVesting` varsa launch sayfası gösterir; yoksa panel çıkmaz.
 - **Config:** şablon = Config #30 (çalışma anında registry'den okunur), değiştirilen alanlar: `partnerRecipient` = DFS kasası, `creatorShareOfNonProtocolBps` 0, `leftoverReceiver` = launch sahibi, `postMigrationCollectFeeMode` 1 (yalnız quote), LP dağılımı partner = launch sahibi (10000 kalıcı kilit), creator 0. Mezuniyet sonrası LP ücretleri launch sahibinin cüzdanına gider ve kasaya sahibi ekler; otomatik değil (kasanın NFT ücretini kendi başına talep edememesi nedeniyle, bkz. Bölüm 3).
 - **Kasa:** sahip = launch'ı açan cüzdan, token/base = WETH, salt = hash(repo, commit, sahip, alıcı+bps) (aynı girdi aynı kasa: işlem yarıda kalırsa devam eder). Kasa sonrası sahip `setClaimSource(feeVault)` çağırır; böylece alıcılar `fundFromClaimSource` ile bekleyen ücreti kasaya çekip `claim` eder.
-- **Metadata:** `{app, repo, katkiCommit, vault}` base64 `data:application/json` olarak hem `metadataURI` (olay, keşif) hem `creatorMetadataURI` (görünüm, launch sayfası tek `eth_call` ile okur) alanına yazılır.
+- **Metadata:** `{app, repo, fileCommit, vault}` base64 `data:application/json` olarak hem `metadataURI` (olay, keşif) hem `creatorMetadataURI` (görünüm, launch sayfası tek `eth_call` ile okur) alanına yazılır.
 - **Atomik ilk alım:** `createConfigAndPoolWithFirstBuy` (config + launch + alım tek işlem, alıcı = sahip). WETH sarma ve approve ayrı adımlar. Bakiyesiz rastgele hesapla simüle edilemez ("Quote balance is below the atomic first-buy amount"): bu yol canlı **doğrulanamadı**.
-- **Cüzdansız simülasyon** (`app/scripts/simulate-create.ts`, rastgele `from`): kasa oluşturma OK (~686k gaz), config kaydı OK (~490k, id 49), `registerConfigAndLaunch` OK (~2,10M gaz). 6 katkıcıdan ilk 5'i kasaya girdi.
+- **Cüzdansız simülasyon** (`app/scripts/simulate-create.ts`, rastgele `from`): kasa oluşturma OK (~686k gaz), config kaydı OK (~490k, id 49), `registerConfigAndLaunch` OK (~2,10M gaz). 6 katılımcıdan ilk 5'i kasaya girdi.
 - **Eğri geometrisi:** sqrt fiyatlar Q64.64; taban = L(1/Sa - 1/Sb), quote = L(Sb - Sa)/2^128, fiyat = (S/2^64)^2. Config #30'da quote 0,1 ETH (eşikle eşit), taban ~%90 arz; canlı teklifle (1e14 wei -> 4,9278e15) uyumlu.
 - **Satış teklifi:** hiç satılmamış eğride satış `PriceOutsideCurve` (0x48e8f5d8) ile revert olur; arayüz bunu insan diliyle gösterir.
 - **Data API** bu oturumda erişilemedi (bağlantı yok); uygulama 4 sn denedikten sonra zincir taramasına düşer. Yanıt şekli SDK tiplerinden, canlı doğrulanamadı.
 - **Blok süresi** 1 sn (ölçüldü): 200.000 blok ~2,3 gün; Keşfet varsayılan olarak bu pencereyi tarar, sonuçları localStorage'a yazar, "Scan further back" ile genişler.
 
-- **Tek katkıcı modu:** .katki.json'da uygun (repo katkıcısı, wallet'ı olan) katkıcı sayısı tam 1 ise DFS kasası açılmaz; Config `partnerRecipient` = o cüzdan, `creatorShare` 0, metadata `{app, repo, katkiCommit, recipient}` (vault yerine; ikisi birden ya da hiçbiri mismatch). Ücret launch fee store'unda birikir, alıcı `feeVault.claimFor(WETH, kendisi, kendisi)` ile claim eder. Cüzdansız simülasyon (`scripts/simulate-create.ts`): config ~490k gaz + launch ~2,10M gaz, ikisi de OK. Kasa adımı ve `setClaimSource` yok: 1 işlem az (kasa) + 1 (claim-source) = 2 az.
-- **Create akışı:** head sha her zaman taze okunur (önbellek atlanır ve üzerine yazılır); aksi halde "Check again" eski commit'i okur. Eksik `.katki.json` için GitHub "yeni dosya" bağlantısı (`/new/{branch}?filename=.katki.json&value=...`) dosyayı hazır doldurur; bağlı cüzdan seçilen katkıcının satırına yazılır.
+- **Tek katılımcı modu:** .tributary.json'da uygun (repo katılımcısı, wallet'ı olan) katılımcı sayısı tam 1 ise DFS kasası açılmaz; Config `partnerRecipient` = o cüzdan, `creatorShare` 0, metadata `{app, repo, fileCommit, recipient}` (vault yerine; ikisi birden ya da hiçbiri mismatch). Ücret launch fee store'unda birikir, alıcı `feeVault.claimFor(WETH, kendisi, kendisi)` ile claim eder. Cüzdansız simülasyon (`scripts/simulate-create.ts`): config ~490k gaz + launch ~2,10M gaz, ikisi de OK. Kasa adımı ve `setClaimSource` yok: 1 işlem az (kasa) + 1 (claim-source) = 2 az.
+- **Create akışı:** head sha her zaman taze okunur (önbellek atlanır ve üzerine yazılır); aksi halde "Check again" eski commit'i okur. Eksik `.tributary.json` için GitHub "yeni dosya" bağlantısı (`/new/{branch}?filename=.tributary.json&value=...`) dosyayı hazır doldurur; bağlı cüzdan seçilen katılımcının satırına yazılır.

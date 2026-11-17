@@ -1,22 +1,22 @@
 /**
  * Everything the Create page learns from GitHub, in one pure-ish function (network through `Deps`).
- * Result stages mirror the prototype: error, missing .katki.json, invalid file, found.
+ * Result stages mirror the prototype: error, missing .tributary.json, invalid file, found.
  */
-import { getContributorsInfo, getHeadSha, getKatkiText, getRepoInfo, GitHubError, parseRepoInput, defaultDeps, type Deps, type RepoInfo, type RepoRef } from "./github";
-import { checkAgainstHistory, missingFromFile, parseKatki, templateFor, type KatkiFile, type KatkiIssue, type RepoContributor } from "./katki";
+import { getContributorsInfo, getHeadSha, getContribFileText, getRepoInfo, GitHubError, parseRepoInput, defaultDeps, type Deps, type RepoInfo, type RepoRef } from "./github";
+import { checkAgainstHistory, missingFromFile, parseContribFile, templateFor, type ContribFileData, type ContribFileIssue, type RepoContributor } from "./contribFile";
 import { planRecipients, type RecipientPlan } from "./split";
 
 export type ReadResult =
   | { stage: "error"; message: string; retryable: boolean }
   | { stage: "missing"; ref: RepoRef; info: RepoInfo; sha: string; template: string; authors: number; history: RepoContributor[] }
-  | { stage: "invalid"; ref: RepoRef; info: RepoInfo; sha: string; errors: KatkiIssue[]; warnings: KatkiIssue[] }
+  | { stage: "invalid"; ref: RepoRef; info: RepoInfo; sha: string; errors: ContribFileIssue[]; warnings: ContribFileIssue[] }
   | {
       stage: "found";
       ref: RepoRef;
       info: RepoInfo;
       sha: string;
-      file: KatkiFile;
-      warnings: KatkiIssue[];
+      file: ContribFileData;
+      warnings: ContribFileIssue[];
       history: RepoContributor[];
       selection: RecipientPlan;
       notInFile: RepoContributor[];
@@ -29,7 +29,7 @@ export async function readRepository(input: string, deps: Deps = { ...defaultDep
     const info = await getRepoInfo(ref, deps, true);
     if (info.isPrivate) return { stage: "error", message: `${info.fullName} is private. Tributary can read public repositories only.`, retryable: false };
     const sha = await getHeadSha(ref, info.defaultBranch, deps, true);
-    const text = await getKatkiText(ref, sha, deps);
+    const text = await getContribFileText(ref, sha, deps);
     if (text === null) {
       let history: RepoContributor[] = [];
       try {
@@ -39,7 +39,7 @@ export async function readRepository(input: string, deps: Deps = { ...defaultDep
       }
       return { stage: "missing", ref, info, sha, template: templateFor(history), authors: history.length, history };
     }
-    const parsed = parseKatki(text);
+    const parsed = parseContribFile(text);
     if (!parsed.ok) return { stage: "invalid", ref, info, sha, errors: parsed.errors, warnings: [] };
     const { list: history, truncated } = await getContributorsInfo(ref, deps);
     const checked = checkAgainstHistory(parsed.file, history);

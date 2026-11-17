@@ -4,7 +4,7 @@ import { useWalletClient } from "wagmi";
 import type { Address } from "viem";
 import { Av, Banner, Spinner, StepList, type ProgressStep } from "./ui";
 import { useWallet } from "../hooks/useWallet";
-import type { KatkiInfo } from "../hooks/useLaunch";
+import type { ContribFileInfo } from "../hooks/useLaunch";
 import type { AllocationRead } from "../lib/allocation";
 import { runDistribution, readAllocation, splitByShares } from "../lib/allocation";
 import { explorerTx, publicClient } from "../lib/chain";
@@ -16,7 +16,7 @@ export type AllocRow = { wallet: Address; github: string | null; due: bigint; se
 
 export type AllocRecipient = { recipient: Address; share: bigint };
 
-export function allocationRows(recipients: readonly AllocRecipient[], info: KatkiInfo | undefined, alloc: AllocationRead): AllocRow[] {
+export function allocationRows(recipients: readonly AllocRecipient[], info: ContribFileInfo | undefined, alloc: AllocationRead): AllocRow[] {
   const handleOf = new Map<string, string>((info?.file?.contributors ?? []).map((c) => [c.wallet.toLowerCase(), c.github]));
   const dues = alloc.firstBuy > 0n ? splitByShares(alloc.firstBuy, recipients.map((r) => r.share)) : recipients.map(() => 0n);
   return recipients.map((r, i) => ({
@@ -34,7 +34,7 @@ export function AllocationPanel(p: {
   creator: Address;
   /** Who the fee goes to: the vault's recipients, or the one wallet. Shares are weights. */
   recipients: readonly AllocRecipient[];
-  info: KatkiInfo | undefined;
+  info: ContribFileInfo | undefined;
   alloc: AllocationRead | undefined;
   loading: boolean;
   refreshing?: boolean;

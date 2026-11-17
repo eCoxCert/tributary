@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getContributors, getHeadSha, getKatkiText, GitHubError, parseRepoInput, type Deps } from "./github";
+import { getContributors, getHeadSha, getContribFileText, GitHubError, parseRepoInput, type Deps } from "./github";
 
 function mem(): Deps["storage"] {
   const m = new Map<string, string>();
@@ -65,12 +65,12 @@ describe("github cache and errors", () => {
     const deps: Deps = { fetch: async () => res(404, {}), storage: null, now: () => 0 };
     await expect(getHeadSha(ref, "main", deps)).rejects.toMatchObject({ kind: "not-found" });
   });
-  it("returns null for a missing .katki.json and does not cache that answer", async () => {
+  it("returns null for a missing .tributary.json and does not cache that answer", async () => {
     let calls = 0;
     const deps: Deps = { fetch: async () => { calls++; return res(404, "404: Not Found"); }, storage: mem(), now: () => 0 };
     const sha = "a".repeat(40);
-    expect(await getKatkiText(ref, sha, deps)).toBeNull();
-    expect(await getKatkiText(ref, sha, deps)).toBeNull();
+    expect(await getContribFileText(ref, sha, deps)).toBeNull();
+    expect(await getContribFileText(ref, sha, deps)).toBeNull();
     expect(calls).toBe(2);
   });
   it("pages through contributors until a short page", async () => {

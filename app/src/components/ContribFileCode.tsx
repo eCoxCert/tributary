@@ -1,6 +1,6 @@
-/** Syntax-coloured .katki.json (keys in ink, strings in accent, comments in ink-3), as the design system describes. */
+/** Syntax-coloured .tributary.json (keys in ink, strings in accent, comments in ink-3), as the design system describes. */
 /** `wrap`: the wallet goes on its own line so nothing is cut off in a narrow panel. */
-export function KatkiCode({ rows, more, label, wrap }: { rows: { github: string; wallet: string }[]; more?: boolean; label: string; wrap?: boolean }) {
+export function ContribFileCode({ rows, more, label, wrap }: { rows: { github: string; wallet: string }[]; more?: boolean; label: string; wrap?: boolean }) {
   return (
     <pre className="code" aria-label={label}>
       <span className="k">{"{"}</span>

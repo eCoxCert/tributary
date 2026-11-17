@@ -37,7 +37,7 @@ p{margin-top:24px;color:var(--ink-2);font-size:24px;line-height:1.4}
 </style></head><body>
 <div><div class="brand"><svg viewBox="0 0 24 24" fill="none"><path d="M2.5 5.25H8a4 4 0 0 1 4 4M21.5 5.25H16a4 4 0 0 0-4 4" stroke="currentColor" stroke-width="2.5"/><path d="M12 8.75V21" stroke="currentColor" stroke-width="3.5"/></svg>Tributary</div>
 <h1>Token launches that pay a repo's contributors</h1><p>Every trade pays a fee, split by commit share. GIWA Sepolia testnet.</p></div>
-<div class="card"><div class="file"><u>.katki.json</u><br>{ <i>"version"</i>: 1,<br>&nbsp;&nbsp;<i>"contributors"</i>: [ ... ] }</div>
+<div class="card"><div class="file"><u>.tributary.json</u><br>{ <i>"version"</i>: 1,<br>&nbsp;&nbsp;<i>"contributors"</i>: [ ... ] }</div>
 <div class="graph"><svg width="236" height="${H}"><circle cx="40" cy="${mid}" r="7" fill="var(--surface)" stroke="var(--ink)" stroke-width="2"/><path d="M14 ${mid}H40" stroke="var(--ink)" stroke-width="6" stroke-linecap="round"/>${branches}</svg><div class="rows">${labels}</div></div></div>
 </body></html>`;
 

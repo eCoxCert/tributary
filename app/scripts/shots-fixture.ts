@@ -86,9 +86,9 @@ for (const [width, height] of [[1440, 900], [375, 812]] as const) {
     await page.goto(`${BASE}#/create${q}`);
     await page.fill("#repo", "octocat/Hello-World");
     await page.click("text=Read repository");
-    try { await page.waitForSelector("#katki .btn-primary", { timeout: 45_000 }); } catch { errors.push("not ready: missing guide (GitHub unreachable or rate limited?)"); }
+    try { await page.waitForSelector("#format .btn-primary", { timeout: 45_000 }); } catch { errors.push("not ready: missing guide (GitHub unreachable or rate limited?)"); }
     await page.waitForTimeout(800);
-    const m = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth, href: (document.querySelector("#katki a.btn-primary") as HTMLAnchorElement | null)?.href ?? "", rel: (document.querySelector("#katki a.btn-primary") as HTMLAnchorElement | null)?.rel ?? "" }));
+    const m = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth, href: (document.querySelector("#format a.btn-primary") as HTMLAnchorElement | null)?.href ?? "", rel: (document.querySelector("#format a.btn-primary") as HTMLAnchorElement | null)?.rel ?? "" }));
     const file = `fixture-create-missing${label}-light-${width}.png`;
     await page.screenshot({ path: resolve(OUT, file), fullPage: true });
     console.log(file.padEnd(46), m.sw > m.cw ? "OVERFLOW" : "no overflow", `errors=${errors.length}`, m.rel, m.href.slice(0, 80));

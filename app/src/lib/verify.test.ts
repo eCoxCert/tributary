@@ -13,7 +13,7 @@ const good = (): VerifyInput => ({
   creator: C,
   expectedToken: W,
   vault: { owner: C, token: W, base: W, fromFactory: true, recipients: [{ recipient: R1, share: 6000n }, { recipient: R2, share: 4000n }] },
-  katki: { state: "ok", wallets: [R1, R2] },
+  contribFile: { state: "ok", wallets: [R1, R2] },
   provenance: { state: "ok" },
   handles: { state: "ok" },
 });
@@ -51,15 +51,15 @@ describe("verifyTributaryLaunch", () => {
     const g = good();
     expect(status({ ...g, vault: { ...g.vault!, fromFactory: null } })).toBe("unverifiable");
   });
-  it("mismatch: .katki.json missing or invalid at the commit", () => {
-    expect(status({ ...good(), katki: { state: "missing" } })).toBe("mismatch");
-    expect(status({ ...good(), katki: { state: "invalid" } })).toBe("mismatch");
+  it("mismatch: .tributary.json missing or invalid at the commit", () => {
+    expect(status({ ...good(), contribFile: { state: "missing" } })).toBe("mismatch");
+    expect(status({ ...good(), contribFile: { state: "invalid" } })).toBe("mismatch");
   });
-  it("mismatch: recipient not listed in .katki.json", () => {
-    expect(status({ ...good(), katki: { state: "ok", wallets: [R1] } })).toBe("mismatch");
+  it("mismatch: recipient not listed in .tributary.json", () => {
+    expect(status({ ...good(), contribFile: { state: "ok", wallets: [R1] } })).toBe("mismatch");
   });
   it("unverifiable, never verified: GitHub unavailable or vault unreadable", () => {
-    expect(status({ ...good(), katki: { state: "unavailable", reason: "rate limit" } })).toBe("unverifiable");
+    expect(status({ ...good(), contribFile: { state: "unavailable", reason: "rate limit" } })).toBe("unverifiable");
     expect(status({ ...good(), vault: null })).toBe("unverifiable");
   });
   it("mismatch: commit is not on the default branch (a fork's commit)", () => {
@@ -73,7 +73,7 @@ describe("verifyTributaryLaunch", () => {
     expect(status({ ...good(), handles: { state: "unavailable", reason: "network" } })).toBe("unverifiable");
   });
   it("a real mismatch wins over an unavailable check", () => {
-    expect(status({ ...good(), creatorShareOfNonProtocolBps: 1, katki: { state: "unavailable", reason: "x" } })).toBe("mismatch");
+    expect(status({ ...good(), creatorShareOfNonProtocolBps: 1, contribFile: { state: "unavailable", reason: "x" } })).toBe("mismatch");
   });
 });
 
@@ -85,7 +85,7 @@ describe("single-recipient launches (no vault)", () => {
     creator: C,
     expectedToken: W,
     vault: null,
-    katki: { state: "ok", wallets: [R1] },
+    contribFile: { state: "ok", wallets: [R1] },
     provenance: { state: "ok" },
     handles: { state: "ok" },
   });
@@ -99,16 +99,16 @@ describe("single-recipient launches (no vault)", () => {
     expect(status({ ...direct(), creatorShareOfNonProtocolBps: 1 })).toBe("mismatch");
   });
   it("mismatch: the file lists a different wallet, or more than this one", () => {
-    expect(status({ ...direct(), katki: { state: "ok", wallets: [R2] } })).toBe("mismatch");
-    expect(status({ ...direct(), katki: { state: "ok", wallets: [R1, R2] } })).toBe("mismatch");
+    expect(status({ ...direct(), contribFile: { state: "ok", wallets: [R2] } })).toBe("mismatch");
+    expect(status({ ...direct(), contribFile: { state: "ok", wallets: [R1, R2] } })).toBe("mismatch");
   });
   it("mismatch: handle is not a repo contributor, or the commit is not on the default branch, or the file is missing", () => {
     expect(status({ ...direct(), handles: { state: "mismatch", detail: "x" } })).toBe("mismatch");
     expect(status({ ...direct(), provenance: { state: "mismatch", detail: "fork" } })).toBe("mismatch");
-    expect(status({ ...direct(), katki: { state: "missing" } })).toBe("mismatch");
+    expect(status({ ...direct(), contribFile: { state: "missing" } })).toBe("mismatch");
   });
   it("unverifiable, never verified, when GitHub cannot be reached", () => {
-    expect(status({ ...direct(), katki: { state: "unavailable", reason: "x" } })).toBe("unverifiable");
+    expect(status({ ...direct(), contribFile: { state: "unavailable", reason: "x" } })).toBe("unverifiable");
   });
   it("mismatch: metadata names both a vault and a recipient, or neither", () => {
     expect(status({ ...direct(), metaVault: V })).toBe("mismatch");

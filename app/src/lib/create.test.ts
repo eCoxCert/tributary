@@ -25,11 +25,11 @@ describe("launch config", () => {
     expect(c.liquidityDistribution.creatorPermanentLockedBps).toBe(0);
   });
   it("names the Config's fee recipient in the metadata", () => {
-    const { config, metadataURI } = assembleLaunch({ owner: OWNER as `0x${string}`, repo: "o/r", katkiCommit: "abcdef1" }, TPL, { vault: VAULT as `0x${string}` });
+    const { config, metadataURI } = assembleLaunch({ owner: OWNER as `0x${string}`, repo: "o/r", fileCommit: "abcdef1" }, TPL, { vault: VAULT as `0x${string}` });
     expect(decodeTributaryMetadata(metadataURI)?.vault?.toLowerCase()).toBe(config.partnerRecipient.toLowerCase());
   });
   it("derives one vault salt per exact split", () => {
-    const base = { owner: OWNER as `0x${string}`, repo: "o/r", katkiCommit: "abcdef1", name: "N", symbol: "NN" };
+    const base = { owner: OWNER as `0x${string}`, repo: "o/r", fileCommit: "abcdef1", name: "N", symbol: "NN" };
     const a = vaultSalt({ ...base, recipients: [{ wallet: VAULT as `0x${string}`, bps: 6000 }, { wallet: OWNER as `0x${string}`, bps: 4000 }] });
     const b = vaultSalt({ ...base, recipients: [{ wallet: VAULT as `0x${string}`, bps: 5000 }, { wallet: OWNER as `0x${string}`, bps: 5000 }] });
     expect(a).not.toBe(b);
@@ -39,7 +39,7 @@ describe("launch config", () => {
 describe("single recipient (no vault)", () => {
   const WALLET = "0x" + "c".repeat(40);
   it("the Config's fee recipient is the contributor's wallet and the metadata names it, not a vault", () => {
-    const { config, metadataURI } = assembleLaunch({ owner: OWNER as `0x${string}`, repo: "o/r", katkiCommit: "abcdef1" }, TPL, { recipient: WALLET as `0x${string}` });
+    const { config, metadataURI } = assembleLaunch({ owner: OWNER as `0x${string}`, repo: "o/r", fileCommit: "abcdef1" }, TPL, { recipient: WALLET as `0x${string}` });
     expect(config.partnerRecipient).toBe(WALLET);
     expect(config.creatorShareOfNonProtocolBps).toBe(0);
     const meta = decodeTributaryMetadata(metadataURI);
