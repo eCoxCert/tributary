@@ -84,3 +84,32 @@
 }
 
 @media (max-width: 520px) { .code { white-space: pre-wrap; overflow-wrap: anywhere; } }
+
+/* Fee router: lay out by the width of the panel itself, not the viewport (the hero column is narrow at 1000 to 1279) */
+.router { container-type: inline-size; }
+.router-file .code { white-space: pre-wrap; overflow-wrap: anywhere; overflow: visible; }
+@media (min-width: 640px) {
+  .router-body { grid-template-columns: minmax(0, 1fr); }
+  .router-file { border-bottom: 1px solid var(--line); border-right: 0; }
+}
+@container (min-width: 640px) {
+  .router-body { grid-template-columns: 262px minmax(0, 1fr); }
+  .router-file { border-bottom: 0; border-right: 1px solid var(--line); }
+}
+
+/* Launch ledger between phone and desktop: drop the contributors column so seven columns do not outgrow the panel */
+@media (min-width: 760px) and (max-width: 999px) {
+  .ledger.launches th:nth-child(5), .ledger.launches td.c-contrib { display: none; }
+  .ledger.launches .repo-sub { white-space: normal; }
+  .ledger.launches td, .ledger.launches th { padding-inline: var(--s-2); }
+}
+
+@media (min-width: 760px) and (max-width: 859px) {
+  .ledger.launches th:nth-child(4), .ledger.launches td.c-left { display: none; }
+}
+
+/* Phone launch rows: the status tag takes the width it needs and the title gets the rest */
+@media (max-width: 759px) {
+  .ledger.launches tr { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; }
+  .ledger.launches .c-repo { min-width: 0; }
+}
