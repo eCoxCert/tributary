@@ -1,0 +1,86 @@
+/* Additions for the live app. Tokens only; app.css and tokens.css are the prototype files, unchanged. */
+
+/* Transaction progress */
+.txsteps { display: grid; gap: var(--s-2); margin-top: var(--s-3); }
+.txsteps li { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: var(--s-3); align-items: center; font-size: var(--fs-sm); color: var(--ink-3); min-height: 28px; }
+.txsteps li i { width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--line-strong); display: grid; place-items: center; font-style: normal; font-size: var(--fs-cap); font-variant-numeric: tabular-nums; }
+.txsteps li small { display: block; color: var(--ink-3); font-size: var(--fs-cap); }
+.txsteps li.is-active { color: var(--ink); font-weight: 550; }
+.txsteps li.is-active i { border-color: var(--accent); color: var(--accent); }
+.txsteps li.is-active .spin { color: var(--accent); }
+.txsteps li.is-done { color: var(--ink-2); }
+.txsteps li.is-done i { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.txsteps li.is-error { color: var(--neg); }
+.txsteps li.is-error i { border-color: var(--neg); color: var(--neg); }
+.txsteps li.is-skipped { color: var(--ink-3); text-decoration: line-through; }
+
+.scan-actions { display: flex; gap: var(--s-2); flex-wrap: wrap; margin-top: var(--s-3); }
+.err-list { display: grid; gap: var(--s-2); padding-left: var(--s-4); list-style: disc; font-size: var(--fs-ui); }
+.err-list li { color: var(--ink); }
+.pick { display: grid; gap: var(--s-1); font-size: var(--fs-sm); color: var(--ink-2); }
+.pick b { color: var(--ink); font-weight: 600; }
+.chip-list { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+.chip-list .tag { max-width: 100%; }
+.is-hidden { display: none; }
+.muted-note { font-size: var(--fs-sm); color: var(--ink-3); line-height: var(--lh-ui); }
+.panel-note { padding: var(--s-3) var(--s-4); border-top: 1px solid var(--line); font-size: var(--fs-sm); color: var(--ink-2); display: grid; gap: var(--s-2); }
+.slip { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); font-size: var(--fs-sm); color: var(--ink-2); }
+.slip .seg { padding: 2px; }
+.slip .seg button { height: 28px; padding: 0 10px; font-size: var(--fs-sm); }
+.alloc-sum { display: grid; gap: var(--s-3); padding: var(--s-4); }
+.alloc-sum p { font-size: var(--fs-ui); color: var(--ink-2); }
+.alloc-sum p b { color: var(--ink); }
+.status-ok { color: var(--accent); font-weight: 550; display: inline-flex; align-items: center; gap: 4px; }
+.status-wait { color: var(--ink-3); }
+.hatch-chip { display: inline-block; width: 12px; height: 8px; vertical-align: middle; margin-right: 6px; }
+.field textarea.input { height: auto; padding: var(--s-3); font-family: var(--font-mono); font-size: var(--fs-sm); line-height: 1.5; min-height: 140px; resize: vertical; }
+.chain-note { display: flex; gap: var(--s-2); flex-wrap: wrap; font-size: var(--fs-sm); color: var(--ink-3); }
+.sim-list { display: grid; gap: 0; }
+.sim-list > div { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: var(--s-3); padding: var(--s-2) 0; border-bottom: 1px dashed var(--line); font-size: var(--fs-ui); }
+.sim-list > div:last-child { border-bottom: 0; }
+.sim-list svg { width: 16px; height: 16px; margin-top: 3px; }
+.sim-list .ok svg { color: var(--pos); }
+.sim-list .bad svg { color: var(--neg); }
+.sim-list small { display: block; color: var(--ink-3); font-size: var(--fs-sm); overflow-wrap: anywhere; }
+.nowrap { white-space: nowrap; }
+.router-note { font-size: var(--fs-cap); color: var(--ink-3); }
+.ledger td .mono { overflow-wrap: anywhere; }
+@media (max-width: 759px) {
+  .ledger.alloc tr { grid-template-columns: minmax(0, 1fr) auto auto; }
+  .ledger.alloc td.c-who { grid-column: 1 / -1; }
+  .ledger.alloc td.r, .ledger.alloc td.c-state { text-align: right; }
+  .ledger.alloc td[data-k="Due"] { grid-column: 1; text-align: left; }
+}
+.facts-note { font-size: var(--fs-sm); color: var(--ink-3); margin-top: var(--s-2); }
+.addr .mono { overflow-wrap: anywhere; }
+
+/* Launch page grid: the allocation panel sits between the contributor ledger and the founder panel */
+@media (min-width: 1000px) {
+  .a-alloc { grid-column: 1; grid-row: 3; }
+  .a-lock { grid-column: 1; grid-row: 4; }
+  .l-side { grid-row: 1 / span 4; }
+}
+
+.trade .slip .seg { display: inline-flex; grid-template-columns: none; flex-wrap: nowrap; width: auto; flex: none; }
+.slip .seg button { flex: none; min-width: 44px; }
+.repo > div { min-width: 0; }
+.repo-name { display: block; max-width: 100%; }
+
+/* Light theme: the sold part of the illustration needs a visible fill */
+.phase-curve .chart .area { fill: var(--accent-line); opacity: 0.45; }
+/* Footer has three columns */
+@media (min-width: 760px) { .ftr-grid { grid-template-columns: 2fr 1fr 1fr; } }
+/* Definition lists on phones: label on top, text under it, left aligned */
+@media (max-width: 640px) {
+  .kv.fmt > div { display: grid; gap: 2px; }
+  .kv.fmt dd { text-align: left; }
+}
+/* /katki: reference on the left, sticky summary on the right */
+.katki-grid { display: grid; gap: var(--s-5); align-items: start; }
+.katki-grid > * { min-width: 0; }
+@media (min-width: 1000px) {
+  .katki-grid { grid-template-columns: minmax(0, 1fr) 320px; gap: var(--s-7); }
+  .katki-side { position: sticky; top: calc(var(--header-h) + var(--s-5)); }
+}
+
+@media (max-width: 520px) { .code { white-space: pre-wrap; overflow-wrap: anywhere; } }

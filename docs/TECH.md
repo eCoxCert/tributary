@@ -292,3 +292,17 @@ declare function commitsToBps(commits: Record<string, number>): Record<string, n
 6. **Sürüm:** 0.3.10 npm'de ama `latest` değil ve kendi notu "yayınlanmadı" diyor; ürün hangi sürüme sabitlenecek şef kararı.
 7. **Creator rolü:** Creator = launch'ı çağıran cüzdan; kullanıcı cüzdanından mı platform cüzdanından mı açılacağı (ücret payı, `transferCreator` sonrası ücret hakları [doğrulanamadı]) tasarım kararı.
 8. **TokenLock:** yeni bir launch tokeni için bağımsız kilit canlı denenmedi; gömülü vesting yeni Config gerektirir.
+
+
+## 11. Tributary uygulaması: kararlar ve doğrulama (app/)
+
+- **Kurucu payı kilidi:** Config'in gömülü vesting'i (`lockedBaseVesting`, mezuniyette başlar, alıcı = launch creator) seçildi; TokenLock bağımsız yolu kullanılmadı. Gerekçe: ek işlem ve approve gerektirmez, kilit launch'ın parçasıdır. **Uygulamada kurucu payı henüz sunulmuyor:** Config #30 şablonunun segmentleri arzın tamamını kullanıyor, kilit için arzdan pay ayırmak `buildPortableAmmoraV4Config` ile yeni eğri hesabı ister (denenmedi). Config'te `lockedBaseVesting` varsa launch sayfası gösterir; yoksa panel çıkmaz.
+- **Config:** şablon = Config #30 (çalışma anında registry'den okunur), değiştirilen alanlar: `partnerRecipient` = DFS kasası, `creatorShareOfNonProtocolBps` 0, `leftoverReceiver` = launch sahibi, `postMigrationCollectFeeMode` 1 (yalnız quote), LP dağılımı partner = launch sahibi (10000 kalıcı kilit), creator 0. Mezuniyet sonrası LP ücretleri launch sahibinin cüzdanına gider ve kasaya sahibi ekler; otomatik değil (kasanın NFT ücretini kendi başına talep edememesi nedeniyle, bkz. Bölüm 3).
+- **Kasa:** sahip = launch'ı açan cüzdan, token/base = WETH, salt = hash(repo, commit, sahip, alıcı+bps) (aynı girdi aynı kasa: işlem yarıda kalırsa devam eder). Kasa sonrası sahip `setClaimSource(feeVault)` çağırır; böylece alıcılar `fundFromClaimSource` ile bekleyen ücreti kasaya çekip `claim` eder.
+- **Metadata:** `{app, repo, katkiCommit, vault}` base64 `data:application/json` olarak hem `metadataURI` (olay, keşif) hem `creatorMetadataURI` (görünüm, launch sayfası tek `eth_call` ile okur) alanına yazılır.
+- **Atomik ilk alım:** `createConfigAndPoolWithFirstBuy` (config + launch + alım tek işlem, alıcı = sahip). WETH sarma ve approve ayrı adımlar. Bakiyesiz rastgele hesapla simüle edilemez ("Quote balance is below the atomic first-buy amount"): bu yol canlı **doğrulanamadı**.
+- **Cüzdansız simülasyon** (`app/scripts/simulate-create.ts`, rastgele `from`): kasa oluşturma OK (~686k gaz), config kaydı OK (~490k, id 49), `registerConfigAndLaunch` OK (~2,10M gaz). 6 katkıcıdan ilk 5'i kasaya girdi.
+- **Eğri geometrisi:** sqrt fiyatlar Q64.64; taban = L(1/Sa - 1/Sb), quote = L(Sb - Sa)/2^128, fiyat = (S/2^64)^2. Config #30'da quote 0,1 ETH (eşikle eşit), taban ~%90 arz; canlı teklifle (1e14 wei -> 4,9278e15) uyumlu.
+- **Satış teklifi:** hiç satılmamış eğride satış `PriceOutsideCurve` (0x48e8f5d8) ile revert olur; arayüz bunu insan diliyle gösterir.
+- **Data API** bu oturumda erişilemedi (bağlantı yok); uygulama 4 sn denedikten sonra zincir taramasına düşer. Yanıt şekli SDK tiplerinden, canlı doğrulanamadı.
+- **Blok süresi** 1 sn (ölçüldü): 200.000 blok ~2,3 gün; Keşfet varsayılan olarak bu pencereyi tarar, sonuçları localStorage'a yazar, "Scan further back" ile genişler.
