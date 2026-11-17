@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Launches on GIWA Sepolia · Tributary</title>
+<meta name="description" content="Every repository token on Tributary: curve progress, ETH left to graduation, contributors and 24-hour fees.">
+<meta property="og:title" content="Launches on GIWA Sepolia · Tributary">
+<meta property="og:description" content="Every repository token on Tributary: curve progress, ETH left to graduation, contributors and 24-hour fees.">
+<meta name="theme-color" content="#f5f6f5" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f1214" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="../brand/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Hanken+Grotesk:wght@400..800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/tokens.css">
+<link rel="stylesheet" href="assets/app.css">
+<script>try{var t=new URLSearchParams(location.search).get("theme")||localStorage.getItem("trib-theme")||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body data-default-wallet="disconnected">
+<a class="skip" href="#main">Skip to content</a>
+
+<div class="testnet"><div class="wrap"><span><b>Testnet.</b> Tributary runs on GIWA Sepolia. Every figure in this prototype is sample data.</span></div></div>
+
+<header class="hdr">
+  <div class="wrap">
+    <a class="brand" href="index.html" aria-label="Tributary home">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2.5 5.25H8a4 4 0 0 1 4 4M21.5 5.25H16a4 4 0 0 0-4 4" stroke="currentColor" stroke-width="2.5"/><path class="stem" d="M12 8.75V21" stroke="currentColor" stroke-width="3.5"/></svg>
+      Tributary
+    </a>
+    <nav class="nav" aria-label="Main">
+      <a href="explore.html" aria-current="page">Launches</a>
+      <a href="create.html">Launch a repo</a>
+      <a href="create.html#katki">.katki.json</a>
+      <a href="#">Docs</a>
+    </nav>
+    <div class="hdr-end">
+      <span class="netpill"><i></i><span>GIWA Sepolia</span></span>
+      <button class="iconbtn" type="button" data-theme-toggle aria-label="Switch to dark theme">
+        <svg class="theme-light-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M16.5 12.2A7 7 0 0 1 7.8 3.5a7 7 0 1 0 8.7 8.7Z"/></svg>
+        <svg class="theme-dark-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/><path d="M10 1.5v2M10 16.5v2M1.5 10h2M16.5 10h2M4 4l1.4 1.4M14.6 14.6 16 16M4 16l1.4-1.4M14.6 5.4 16 4"/></svg>
+      </button>
+      <span data-wallet-slot></span>
+      <button class="iconbtn menu-btn" type="button" aria-expanded="false" aria-label="Open menu">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 6h14M3 10h14M3 14h14"/></svg>
+      </button>
+    </div>
+  </div>
+  <nav class="mnav" aria-label="Mobile">
+    <a href="explore.html" aria-current="page">Launches</a>
+    <a href="create.html">Launch a repo</a>
+    <a href="create.html#katki">.katki.json</a>
+    <a href="#">Docs</a>
+  </nav>
+</header>
+
+<div class="wrap" data-show-wallet="wrong" hidden style="padding-top:16px">
+  <div class="banner banner-warn" role="status">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M10 2.5 18 17H2L10 2.5Z"/><path d="M10 8v4M10 14.2v.3"/></svg>
+    <div>Your wallet is on Ethereum Sepolia. Tributary runs on GIWA Sepolia.</div>
+    <button class="btn btn-sm" type="button">Switch network</button>
+  </div>
+</div>
+
+<main id="main" class="page">
+  <div class="wrap">
+    <div class="page-hd">
+      <div>
+        <h1>Launches</h1>
+        <p>Repository tokens on GIWA Sepolia, newest first.</p>
+      </div>
+      <a class="btn btn-primary" href="create.html">Launch your repo</a>
+    </div>
+
+    <dl class="statline" data-show-state="ready empty error">
+      <div><dt>Live launches</dt><dd><b>12</b></dd></div>
+      <div><dt>In contributor window</dt><dd><b>3</b></dd></div>
+      <div><dt>Graduated</dt><dd><b>2</b></dd></div>
+      <div><dt>Fees, 24 h</dt><dd><b>1.1862 ETH</b></dd></div>
+      <div><dt>Contributors with a share</dt><dd><b>119</b></dd></div>
+    </dl>
+
+    <div class="toolbar" role="search">
+      <div class="seg" role="group" aria-label="Filter by status" data-filter>
+        <button type="button" aria-pressed="true" data-f="all">All</button>
+        <button type="button" aria-pressed="false" data-f="window">Contributor window</button>
+        <button type="button" aria-pressed="false" data-f="public">Public</button>
+        <button type="button" aria-pressed="false" data-f="grad">Graduated</button>
+      </div>
+      <label class="visually-hidden" for="q">Search repositories and tokens</label>
+      <input class="input search" id="q" type="search" placeholder="Search repo or symbol" autocomplete="off" data-q>
+      <label class="visually-hidden" for="sort">Sort launches</label>
+      <select class="input sort" id="sort" data-sort>
+        <option value="new">Newest</option>
+        <option value="close">Closest to graduation</option>
+        <option value="fees">Fees, 24 h</option>
+        <option value="contrib">Most contributors</option>
+      </select>
+    </div>
+
+    <div class="banner banner-err" role="alert" data-show-state="error" hidden style="margin-bottom:16px">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="10" cy="10" r="7.5"/><path d="M10 6v4.5M10 13.2v.3"/></svg>
+      <div><b>Launches did not load.</b> The GIWA Sepolia RPC timed out after 10 seconds. The figures above are from block 4,812,330, about 3 minutes old.</div>
+      <a class="btn btn-sm" href="explore.html">Try again</a>
+    </div>
+
+    <div class="panel">
+      <table class="ledger stack launches" aria-describedby="count">
+        <thead><tr><th>Repository</th><th>Token</th><th>Curve</th><th class="r">To graduation</th><th class="r">Contributors</th><th class="r">Fees, 24 h</th><th>Status</th></tr></thead>
+        <tbody data-rows></tbody>
+      </table>
+      <div class="notice notice-c" data-empty hidden>
+        <h3>No launches match <span data-empty-q>“merkle-rs”</span></h3>
+        <p>Search looks at the repository name and the token symbol. Check the spelling, or clear the search to see all 12 launches.</p>
+        <button class="btn btn-sm" type="button" data-clear>Clear search</button>
+      </div>
+    </div>
+    <p class="hint" id="count" style="margin-top:12px" data-count>Showing 12 of 12 launches</p>
+  </div>
+</main>
+
+<footer class="ftr">
+  <div class="wrap">
+    <div class="ftr-grid">
+      <div>
+        <a class="brand" href="index.html" aria-label="Tributary home"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2.5 5.25H8a4 4 0 0 1 4 4M21.5 5.25H16a4 4 0 0 0-4 4" stroke="currentColor" stroke-width="2.5"/><path class="stem" d="M12 8.75V21" stroke="currentColor" stroke-width="3.5"/></svg>Tributary</a>
+        <p style="margin-top:8px;max-width:34ch">Token launches that pay open-source contributors. Built on the Ammora protocol.</p>
+      </div>
+      <div><h2>Product</h2><ul><li><a href="explore.html">Launches</a></li><li><a href="create.html">Launch a repo</a></li><li><a href="create.html#katki">.katki.json format</a></li></ul></div>
+      <div><h2>Protocol</h2><ul><li><a href="#">Ammora docs</a></li><li><a href="#">Contracts</a></li><li><a href="#">GIWA Sepolia faucet</a></li></ul></div>
+      <div><h2>Elsewhere</h2><ul><li><a href="#">GitHub</a></li><li><a href="#">X</a></li></ul></div>
+    </div>
+    <div class="ftr-base"><span>Testnet software. Tokens on GIWA Sepolia have no market value.</span></div>
+    <div class="proto" aria-label="Prototype states"><span>Prototype states:</span>
+      <a href="?state=loading">Loading</a><a href="?state=empty">Empty filter</a><a href="?state=error">RPC error</a><a href="?wallet=wrong">Wrong network</a><a href="?theme=dark">Dark</a><a href="?theme=light">Light</a>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/app.js"></script>
+<script src="assets/explore.js"></script>
+</body>
+</html>

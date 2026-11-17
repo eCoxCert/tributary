@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Launch a repo · Tributary</title>
+<meta name="description" content="Read a repository's .katki.json, check the contributor split, name the token and launch it on GIWA Sepolia.">
+<meta property="og:title" content="Launch a repo · Tributary">
+<meta property="og:description" content="Read a repository's .katki.json, check the contributor split, name the token and launch it on GIWA Sepolia.">
+<meta name="theme-color" content="#f5f6f5" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f1214" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="../brand/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Hanken+Grotesk:wght@400..800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/tokens.css">
+<link rel="stylesheet" href="assets/app.css">
+<script>try{var t=new URLSearchParams(location.search).get("theme")||localStorage.getItem("trib-theme")||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body data-default-wallet="connected">
+<a class="skip" href="#main">Skip to content</a>
+
+<div class="testnet"><div class="wrap"><span><b>Testnet.</b> Tributary runs on GIWA Sepolia. Every figure in this prototype is sample data.</span></div></div>
+
+<header class="hdr">
+  <div class="wrap">
+    <a class="brand" href="index.html" aria-label="Tributary home">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2.5 5.25H8a4 4 0 0 1 4 4M21.5 5.25H16a4 4 0 0 0-4 4" stroke="currentColor" stroke-width="2.5"/><path class="stem" d="M12 8.75V21" stroke="currentColor" stroke-width="3.5"/></svg>
+      Tributary
+    </a>
+    <nav class="nav" aria-label="Main">
+      <a href="explore.html">Launches</a>
+      <a href="create.html" aria-current="page">Launch a repo</a>
+      <a href="create.html#katki">.katki.json</a>
+      <a href="#">Docs</a>
+    </nav>
+    <div class="hdr-end">
+      <span class="netpill"><i></i><span>GIWA Sepolia</span></span>
+      <button class="iconbtn" type="button" data-theme-toggle aria-label="Switch to dark theme">
+        <svg class="theme-light-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M16.5 12.2A7 7 0 0 1 7.8 3.5a7 7 0 1 0 8.7 8.7Z"/></svg>
+        <svg class="theme-dark-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/><path d="M10 1.5v2M10 16.5v2M1.5 10h2M16.5 10h2M4 4l1.4 1.4M14.6 14.6 16 16M4 16l1.4-1.4M14.6 5.4 16 4"/></svg>
+      </button>
+      <span data-wallet-slot></span>
+      <button class="iconbtn menu-btn" type="button" aria-expanded="false" aria-label="Open menu">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 6h14M3 10h14M3 14h14"/></svg>
+      </button>
+    </div>
+  </div>
+  <nav class="mnav" aria-label="Mobile">
+    <a href="explore.html">Launches</a>
+    <a href="create.html" aria-current="page">Launch a repo</a>
+    <a href="create.html#katki">.katki.json</a>
+    <a href="#">Docs</a>
+  </nav>
+</header>
+
+<div class="wrap" data-show-wallet="wrong" hidden style="padding-top:16px">
+  <div class="banner banner-warn" role="status">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M10 2.5 18 17H2L10 2.5Z"/><path d="M10 8v4M10 14.2v.3"/></svg>
+    <div>Your wallet is on Ethereum Sepolia. Tributary runs on GIWA Sepolia.</div>
+    <button class="btn btn-sm" type="button">Switch network</button>
+  </div>
+</div>
+
+<main id="main" class="page">
+  <div class="wrap">
+    <div class="page-hd">
+      <div>
+        <h1>Launch a repo</h1>
+        <p>Four steps, one transaction on GIWA Sepolia.</p>
+      </div>
+    </div>
+
+    <div class="create-grid">
+      <ol class="steps" aria-label="Launch steps" data-steps>
+        <li aria-current="step"><i>1</i><span>Repository</span></li>
+        <li><i>2</i><span>Contributors</span></li>
+        <li><i>3</i><span>Token</span></li>
+        <li><i>4</i><span>Review</span></li>
+      </ol>
+
+      <div>
+        <!-- Step 1 -->
+        <section class="step-card" aria-labelledby="s1">
+          <div class="step-hd">
+            <h2 id="s1">Repository</h2>
+            <p>Paste a public GitHub repository. Tributary reads <span class="mono">.katki.json</span> from its default branch.</p>
+          </div>
+          <form class="field" data-repo-form novalidate>
+            <label for="repo">GitHub repository</label>
+            <div class="url-row">
+              <div class="input-group"><span class="affix">github.com/</span><input class="input" id="repo" name="repo" placeholder="owner/repository" autocomplete="off" spellcheck="false" aria-describedby="repo-hint repo-err" data-repo></div>
+              <button class="btn btn-primary" type="submit" data-read>Read repository</button>
+            </div>
+            <p class="hint" id="repo-hint">Try <button type="button" class="link" data-try="tidewater/quill-rpc">tidewater/quill-rpc</button>, or <button type="button" class="link" data-try="oakline/plain-cli">oakline/plain-cli</button> for a repo without the file.</p>
+            <p class="err" id="repo-err" role="alert" data-repo-err hidden></p>
+          </form>
+          <dl class="kv reads" data-stage-empty>
+            <div><dt>Tributary reads</dt><dd><span class="mono">.katki.json</span> at the root of the default branch</dd></div>
+            <div><dt>It records</dt><dd>the commit hash the file was read at</dd></div>
+            <div><dt>It compares</dt><dd>each weight with that author’s share of commits</dd></div>
+            <div><dt>It never asks for</dt><dd>repository write access or a GitHub login</dd></div>
+          </dl>
+        </section>
+
+        <!-- Loading -->
+        <section class="step-card panel" data-stage="loading" hidden aria-busy="true" aria-label="Reading repository">
+          <div class="panel-hd"><span class="spin" aria-hidden="true" style="color:var(--accent)"></span><h3>Reading <span data-repo-name>tidewater/quill-rpc</span></h3></div>
+          <table class="ledger stack"><tbody>
+            <tr><td class="full"><span class="sk" style="width:60%"></span></td><td><span class="sk" style="width:80%"></span></td><td><span class="sk" style="width:50%"></span></td></tr>
+            <tr><td class="full"><span class="sk" style="width:48%"></span></td><td><span class="sk" style="width:70%"></span></td><td><span class="sk" style="width:60%"></span></td></tr>
+            <tr><td class="full"><span class="sk" style="width:55%"></span></td><td><span class="sk" style="width:76%"></span></td><td><span class="sk" style="width:40%"></span></td></tr>
+            <tr><td class="full"><span class="sk" style="width:40%"></span></td><td><span class="sk" style="width:64%"></span></td><td><span class="sk" style="width:55%"></span></td></tr>
+          </tbody></table>
+        </section>
+
+        <!-- Missing .katki.json: teaches the file -->
+        <section class="step-card panel" id="katki" data-stage="missing" hidden aria-labelledby="miss-h">
+          <div class="panel-hd"><h3 id="miss-h">No .katki.json in <span data-repo-name>oakline/plain-cli</span></h3><span class="tag" style="margin-left:auto">Step 2 blocked</span></div>
+          <div class="missing">
+            <p class="muted" style="font-size:14px;max-width:62ch">Tributary pays fees only to wallets listed in this file, so a launch cannot start without it. We found 4 commit authors on <span class="mono">main</span> and filled their weights from commit share. Each of them adds their own wallet.</p>
+            <ol>
+              <li>
+                <div>
+                  <h3>Add the file at the repository root</h3>
+                  <p>Weights must add up to 1. Commit share is the usual starting point; you can change it before you merge.</p>
+<pre class="code" aria-label=".katki.json template"><span class="k">{</span>
+  <span class="n">"version"</span>: <span class="k">1</span>,
+  <span class="n">"contributors"</span>: [
+    { <span class="n">"github"</span>: <span class="s">"s-oduya"</span>,   <span class="n">"wallet"</span>: <span class="s">""</span>, <span class="n">"weight"</span>: <span class="k">0.52</span> },
+    { <span class="n">"github"</span>: <span class="s">"m-feld"</span>,    <span class="n">"wallet"</span>: <span class="s">""</span>, <span class="n">"weight"</span>: <span class="k">0.27</span> },
+    { <span class="n">"github"</span>: <span class="s">"cpaz"</span>,      <span class="n">"wallet"</span>: <span class="s">""</span>, <span class="n">"weight"</span>: <span class="k">0.14</span> },
+    { <span class="n">"github"</span>: <span class="s">"r-ibsen"</span>,   <span class="n">"wallet"</span>: <span class="s">""</span>, <span class="n">"weight"</span>: <span class="k">0.07</span> }
+  ]
+<span class="k">}</span></pre>
+                  <div style="margin-top:12px"><button class="btn btn-sm" type="button" data-copy="{}" aria-label="Copy .katki.json template">Copy template</button></div>
+                </div>
+              </li>
+              <li>
+                <div>
+                  <h3>Ask each contributor to add their wallet</h3>
+                  <p>One pull request per person is the cleanest record: the wallet then comes from the account that wrote the code. Leave out anyone who does not want a share and spread their weight over the rest.</p>
+                </div>
+              </li>
+              <li>
+                <div>
+                  <h3>Merge to the default branch and check again</h3>
+                  <p>Tributary reads the file at the latest commit on <span class="mono">main</span> and records that commit hash in the launch.</p>
+                  <div style="margin-top:12px"><button class="btn btn-sm btn-primary" type="button" data-recheck>Check again</button></div>
+                </div>
+              </li>
+            </ol>
+          </div>
+        </section>
+
+        <!-- Step 2: contributors -->
+        <section class="step-card" data-stage="found" hidden aria-labelledby="s2">
+          <div class="step-hd">
+            <h2 id="s2">Contributors</h2>
+            <p>These wallets receive the trading fee and are the only buyers during the contributor window.</p>
+          </div>
+          <div class="found">
+            <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" style="color:var(--pos)" aria-hidden="true"><path d="M4 10.5 8 14.5 16 5.5"/></svg>
+            <span>Found <span class="mono">.katki.json</span> on <span class="mono">main</span> at <span class="mono">3f9a2c1</span>. 12 contributors, weights add up to 1.000.</span>
+          </div>
+          <div class="banner banner-warn">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M10 2.5 18 17H2L10 2.5Z"/><path d="M10 8v4M10 14.2v.3"/></svg>
+            <div>One weight differs from commit history by more than 1 point. You can launch anyway: the file decides the split, not the history.</div>
+          </div>
+          <div class="panel">
+            <table class="ledger stack">
+              <thead><tr><th>Contributor</th><th>Wallet</th><th class="r">Weight in file</th><th class="r">Commit share on main</th></tr></thead>
+              <tbody data-preview></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Step 3: token -->
+        <section class="step-card" data-stage="found" hidden aria-labelledby="s3">
+          <div class="step-hd">
+            <h2 id="s3">Token</h2>
+            <p>The name and symbol are permanent once the launch transaction confirms.</p>
+          </div>
+          <div class="two">
+            <div class="field"><label for="tname">Token name</label><input class="input" id="tname" value="Quill" maxlength="32" autocomplete="off" data-tname><span class="hint">Up to 32 characters. Most launches use the project name.</span></div>
+            <div class="field"><label for="tsym">Symbol</label><input class="input" id="tsym" value="QRPC" maxlength="6" autocomplete="off" spellcheck="false" style="text-transform:uppercase" aria-describedby="tsym-err" data-tsym><span class="err" id="tsym-err" data-tsym-err hidden>Use 2 to 6 letters or digits.</span><span class="hint" data-tsym-hint>2 to 6 letters or digits.</span></div>
+          </div>
+          <div class="panel token-preview">
+            <span class="av" data-av="tidewater/quill-rpc" data-tone="ink"></span>
+            <div><b><span data-pv-name>Quill</span> <span class="faint" data-pv-sym>QRPC</span></b><span class="hint">tidewater/quill-rpc &middot; 1,000,000,000 supply</span></div>
+          </div>
+          <div><button class="btn btn-primary" type="button" data-to-review>Review launch</button></div>
+        </section>
+
+        <!-- Step 4: review -->
+        <section class="step-card panel" data-stage="review" hidden aria-labelledby="s4">
+          <div class="panel-hd"><h2 id="s4">Review</h2></div>
+          <div class="panel-bd">
+            <dl class="kv">
+              <div><dt>Repository</dt><dd>tidewater/quill-rpc</dd></div>
+              <div><dt>.katki.json</dt><dd><span class="mono">main @ 3f9a2c1</span>, 12 contributors</dd></div>
+              <div><dt>Token</dt><dd><span data-rv-token>Quill (QRPC)</span></dd></div>
+              <div><dt>Supply</dt><dd>1,000,000,000, of which 800,000,000 on the curve</dd></div>
+              <div data-assumed><dt>Contributor window</dt><dd>24 hours from launch</dd></div>
+              <div data-assumed><dt>Founder allocation</dt><dd>5%, locked 180 days</dd></div>
+              <div data-assumed><dt>Trading fee</dt><dd>1% of each trade, to contributors</dd></div>
+              <div data-assumed><dt>Graduates at</dt><dd>4.20 ETH raised</dd></div>
+              <div><dt>Network</dt><dd>GIWA Sepolia</dd></div>
+              <div><dt>Estimated gas</dt><dd>0.0021 ETH</dd></div>
+            </dl>
+          </div>
+          <div class="confirm-bar">
+            <p>The split, the lock and the window are written into the launch contract. None of them can be changed after this transaction.</p>
+            <div data-show-wallet="connected outsider"><button class="btn btn-primary btn-lg" type="button" data-launch>Launch QRPC</button></div>
+            <div data-show-wallet="disconnected" hidden><a class="btn btn-ink btn-lg" href="?state=review&amp;wallet=connected">Connect wallet</a></div>
+            <div data-show-wallet="wrong" hidden><button class="btn btn-warn btn-lg" type="button">Switch to GIWA Sepolia</button></div>
+          </div>
+        </section>
+
+        <!-- Done -->
+        <section class="step-card" data-stage="done" hidden>
+          <div class="banner banner-acc" role="status">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 10.5 8 14.5 16 5.5"/></svg>
+            <div><b>QRPC is live.</b> The contributor window is open for 24 hours. Share the launch page with the 12 contributors so they can buy first.</div>
+            <a class="btn btn-sm btn-primary" href="launch.html">Open launch page</a>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="ftr">
+  <div class="wrap">
+    <div class="ftr-grid">
+      <div>
+        <a class="brand" href="index.html" aria-label="Tributary home"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2.5 5.25H8a4 4 0 0 1 4 4M21.5 5.25H16a4 4 0 0 0-4 4" stroke="currentColor" stroke-width="2.5"/><path class="stem" d="M12 8.75V21" stroke="currentColor" stroke-width="3.5"/></svg>Tributary</a>
+        <p style="margin-top:8px;max-width:34ch">Token launches that pay open-source contributors. Built on the Ammora protocol.</p>
+      </div>
+      <div><h2>Product</h2><ul><li><a href="explore.html">Launches</a></li><li><a href="create.html">Launch a repo</a></li><li><a href="create.html#katki">.katki.json format</a></li></ul></div>
+      <div><h2>Protocol</h2><ul><li><a href="#">Ammora docs</a></li><li><a href="#">Contracts</a></li><li><a href="#">GIWA Sepolia faucet</a></li></ul></div>
+      <div><h2>Elsewhere</h2><ul><li><a href="#">GitHub</a></li><li><a href="#">X</a></li></ul></div>
+    </div>
+    <div class="ftr-base"><span>Testnet software. Tokens on GIWA Sepolia have no market value.</span></div>
+    <div class="proto" aria-label="Prototype states"><span>Prototype states:</span>
+      <a href="?">Empty</a><a href="?state=loading">Reading repo</a><a href="?state=found">Contributors found</a><a href="?state=missing">No .katki.json</a><a href="?state=error">Repo not found</a><a href="?state=review">Review</a><a href="?wallet=disconnected">Wallet not connected</a><a href="?wallet=wrong">Wrong network</a><a href="?theme=dark">Dark</a><a href="?theme=light">Light</a>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/app.js"></script>
+<script src="assets/create.js"></script>
+</body>
+</html>
