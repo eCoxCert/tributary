@@ -439,9 +439,9 @@ select.input { appearance: none; padding-right: 32px; background-image: linear-g
   .toolbar .search, .toolbar .sort { max-width: none; flex: 1 1 100%; }
   .toolbar .seg { width: 100%; }
   .toolbar .seg button { flex: 1 1 auto; padding: 0 var(--s-2); font-size: var(--fs-sm); }
-  .statline { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 .statline { display: flex; flex-wrap: wrap; gap: var(--s-2) var(--s-6); padding: var(--s-4) 0; margin-bottom: var(--s-5); border-block: 1px solid var(--line); font-size: var(--fs-sm); color: var(--ink-3); }
+@media (max-width: 640px) { .statline { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .statline b { display: block; color: var(--ink); font-size: var(--fs-body); font-weight: 600; font-variant-numeric: tabular-nums; }
 .prog-cell { display: grid; gap: 6px; min-width: 120px; }
 .prog-cell .num { font-size: var(--fs-sm); color: var(--ink-2); }

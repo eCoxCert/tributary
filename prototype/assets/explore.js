@@ -37,7 +37,7 @@
   }
   if (T.state === "error") {
     body.innerHTML = ""; count.hidden = true;
-    document.querySelector("table.ledger").hidden = true;
+    document.querySelector("table.ledger").closest(".panel").hidden = true;
     return;
   }
   if (T.state === "empty") q.value = "merkle-rs";

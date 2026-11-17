@@ -19,7 +19,7 @@
   $("[data-opens]").textContent = dt(opens);
   $("[data-lock-start]").textContent = d(launched);
   $("[data-lock-end]").textContent = d(unlock);
-  $("[data-unlock]").textContent = "All at once, " + d(unlock);
+  $("[data-unlock]").textContent = "All at once on " + d(unlock);
   var daysLeft = Math.ceil((unlock - Date.now()) / 86400e3);
   $("[data-lock-left]").textContent = daysLeft + " days left";
 
