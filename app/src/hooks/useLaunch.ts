@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { isAddress, type Address } from "viem";
 import { ammoraLaunchFactoryV4Abi } from "@ammora-protocol/sdk";
 import { ADDR, publicClient } from "../lib/chain";
-import { findLaunch, readCurveSnapshot, readVaultSnapshot, type CurveSnapshot, type LaunchRecord } from "../lib/launches";
+import { findLaunch, readCurveSnapshot, readDirectSnapshot, readVaultSnapshot, type CurveSnapshot, type LaunchRecord } from "../lib/launches";
 import { decodeTributaryMetadata, type TributaryMeta } from "../lib/metadata";
 import { getContributors, getRepoInfo, parseRepoInput, type RepoInfo } from "../lib/github";
 import type { KatkiFile, RepoContributor } from "../lib/katki";
@@ -67,6 +67,18 @@ export function useBlockTime(block: bigint | undefined) {
     enabled: block !== undefined,
     staleTime: Infinity,
     queryFn: async () => Number((await publicClient.getBlock({ blockNumber: block as bigint })).timestamp) * 1000,
+  });
+}
+
+export function useDirect(recipient: Address | undefined) {
+  return useQuery({
+    queryKey: ["direct", recipient?.toLowerCase()],
+    enabled: !!recipient,
+    refetchInterval: 20_000,
+    queryFn: async () => {
+      if (import.meta.env.DEV && fx()) return (await import("../fixtures/tributary")).fixtureDirect();
+      return readDirectSnapshot(recipient as Address);
+    },
   });
 }
 
@@ -135,7 +147,7 @@ export function useAllocation(rec: LaunchRecord | null | undefined, creator: Add
     refetchInterval: 30_000,
     retry: 1,
     queryFn: async () => {
-      if (import.meta.env.DEV && fx()) return (await import("../fixtures/tributary")).fixtureAllocation();
+      if (import.meta.env.DEV && fx()) return (await import("../fixtures/tributary")).fixtureAllocation(fx() as string);
       return readAllocation({ token: (rec as LaunchRecord).token, curve: curve as Address, creator: creator as Address, txHash: (rec as LaunchRecord).txHash, block: (rec as LaunchRecord).block });
     },
   });

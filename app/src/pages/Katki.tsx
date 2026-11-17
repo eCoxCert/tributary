@@ -4,7 +4,7 @@ import { Banner } from "../components/ui";
 import { KatkiCode } from "../components/KatkiCode";
 import { useTitle } from "../hooks/useTitle";
 import { parseKatki, WALLET_PLACEHOLDER, type ParseResult } from "../lib/katki";
-import { MAX_RECIPIENTS, MIN_RECIPIENTS } from "../lib/split";
+import { MAX_RECIPIENTS } from "../lib/split";
 import { EXAMPLE_CONTRIBUTORS } from "../lib/examples";
 
 const SAMPLE = JSON.stringify({ version: 1, contributors: EXAMPLE_CONTRIBUTORS.slice(0, 2).map((c) => ({ github: c.github, wallet: WALLET_PLACEHOLDER })) }, null, 2);
@@ -43,7 +43,7 @@ export function Katki() {
               <div className="panel-hd"><h2 id="rules-h">How the split is made</h2></div>
               <div className="panel-bd" style={{ display: "grid", gap: 12 }}>
                 <ul className="err-list">
-                  <li>The fee vault holds {MIN_RECIPIENTS} to {MAX_RECIPIENTS} recipients. With fewer than {MIN_RECIPIENTS} listed contributors who have commits, the launch is blocked and the page says why.</li>
+                  <li>One listed contributor with commits: the fee goes straight to that wallet, with no vault. Two to {MAX_RECIPIENTS}: a fee vault splits it. Nobody eligible: the launch is blocked and the page says why.</li>
                   <li>If more than {MAX_RECIPIENTS} people are listed, the {MAX_RECIPIENTS} with the most commits are included. Ties are broken by GitHub handle, A to Z. The launch form lists who is in and who is not.</li>
                   <li>Shares are the commit counts of the included people, scaled to 10,000 basis points. Each share is rounded down and the leftover goes to the largest share.</li>
                   <li>The file is read from the default branch at its latest commit. That commit hash is recorded in the launch.</li>
@@ -86,7 +86,7 @@ export function Katki() {
               <div><dt>File</dt><dd><span className="mono">.katki.json</span></dd></div>
               <div><dt>Location</dt><dd>Repository root, default branch</dd></div>
               <div><dt>Fields</dt><dd>version, github, wallet</dd></div>
-              <div><dt>Fee recipients</dt><dd>{MIN_RECIPIENTS} to {MAX_RECIPIENTS}, top by commits</dd></div>
+              <div><dt>Fee recipients</dt><dd>1 to {MAX_RECIPIENTS}, top by commits</dd></div>
               <div><dt>Weights</dt><dd>From GitHub commit counts</dd></div>
             </dl>
             <div className="panel-note"><Link className="btn btn-sm" to="/create">Launch your repo</Link></div>

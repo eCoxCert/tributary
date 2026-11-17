@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AmmoraV4Config } from "@ammora-protocol/sdk";
-import { assembleLaunch, composeConfig, vaultSalt } from "./create";
+import { assembleLaunch, composeConfig, createMode, createStepIds, vaultSalt } from "./create";
 import { decodeTributaryMetadata } from "./metadata";
 
 const OWNER = "0x" + "b".repeat(40);
@@ -25,13 +25,36 @@ describe("launch config", () => {
     expect(c.liquidityDistribution.creatorPermanentLockedBps).toBe(0);
   });
   it("names the Config's fee recipient in the metadata", () => {
-    const { config, metadataURI } = assembleLaunch({ owner: OWNER as `0x${string}`, repo: "o/r", katkiCommit: "abcdef1" }, TPL, VAULT as `0x${string}`);
-    expect(decodeTributaryMetadata(metadataURI)?.vault.toLowerCase()).toBe(config.partnerRecipient.toLowerCase());
+    const { config, metadataURI } = assembleLaunch({ owner: OWNER as `0x${string}`, repo: "o/r", katkiCommit: "abcdef1" }, TPL, { vault: VAULT as `0x${string}` });
+    expect(decodeTributaryMetadata(metadataURI)?.vault?.toLowerCase()).toBe(config.partnerRecipient.toLowerCase());
   });
   it("derives one vault salt per exact split", () => {
     const base = { owner: OWNER as `0x${string}`, repo: "o/r", katkiCommit: "abcdef1", name: "N", symbol: "NN" };
     const a = vaultSalt({ ...base, recipients: [{ wallet: VAULT as `0x${string}`, bps: 6000 }, { wallet: OWNER as `0x${string}`, bps: 4000 }] });
     const b = vaultSalt({ ...base, recipients: [{ wallet: VAULT as `0x${string}`, bps: 5000 }, { wallet: OWNER as `0x${string}`, bps: 5000 }] });
     expect(a).not.toBe(b);
+  });
+});
+
+describe("single recipient (no vault)", () => {
+  const WALLET = "0x" + "c".repeat(40);
+  it("the Config's fee recipient is the contributor's wallet and the metadata names it, not a vault", () => {
+    const { config, metadataURI } = assembleLaunch({ owner: OWNER as `0x${string}`, repo: "o/r", katkiCommit: "abcdef1" }, TPL, { recipient: WALLET as `0x${string}` });
+    expect(config.partnerRecipient).toBe(WALLET);
+    expect(config.creatorShareOfNonProtocolBps).toBe(0);
+    const meta = decodeTributaryMetadata(metadataURI);
+    expect(meta?.recipient?.toLowerCase()).toBe(WALLET);
+    expect(meta?.vault).toBeUndefined();
+    expect(meta?.recipient?.toLowerCase()).toBe(config.partnerRecipient.toLowerCase());
+  });
+  it("mode is direct for one recipient and vault for more", () => {
+    expect(createMode([1])).toBe("direct");
+    expect(createMode([1, 2])).toBe("vault");
+  });
+  it("the flow has no vault or claim-source step for one recipient, and one fewer transaction", () => {
+    expect(createStepIds("direct", false)).toEqual(["launch"]);
+    expect(createStepIds("vault", false)).toEqual(["vault", "source", "launch"]);
+    expect(createStepIds("direct", true)).toEqual(["wrap", "approve", "launch"]);
+    expect(createStepIds("vault", true).length - createStepIds("direct", true).length).toBe(2);
   });
 });

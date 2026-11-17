@@ -1,10 +1,13 @@
 /**
  * Tributary launch metadata, carried in the token's metadataURI as a `data:application/json` URI:
- *   { "app": "tributary", "repo": "owner/name", "katkiCommit": "<sha>", "vault": "0x..." }
+ *   { "app": "tributary", "repo": "owner/name", "katkiCommit": "<sha>", "vault": "0x..." }       (2 to 5 recipients)
+ *   { "app": "tributary", "repo": "owner/name", "katkiCommit": "<sha>", "recipient": "0x..." }   (one contributor, no vault)
+ * Exactly one of vault / recipient is valid. A record with both or neither still decodes (so it can be called out as a
+ * mismatch by the verifier) but is never trusted.
  */
 import { getAddress, isAddress } from "viem";
 
-export type TributaryMeta = { app: "tributary"; repo: string; katkiCommit: string; vault: `0x${string}` };
+export type TributaryMeta = { app: "tributary"; repo: string; katkiCommit: string; vault?: `0x${string}`; recipient?: `0x${string}` };
 
 const REPO = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})\/[A-Za-z0-9._-]{1,100}$/;
 const SHA = /^[0-9a-f]{7,64}$/i;
@@ -23,11 +26,16 @@ function fromBase64(s: string): string {
   return new TextDecoder().decode(bytes);
 }
 
-export function encodeTributaryMetadata(meta: Omit<TributaryMeta, "app">): string {
+export type MetaTarget = { vault: `0x${string}`; recipient?: never } | { recipient: `0x${string}`; vault?: never };
+
+export function encodeTributaryMetadata(meta: { repo: string; katkiCommit: string } & MetaTarget): string {
   if (!REPO.test(meta.repo)) throw new Error(`Invalid repository name: ${meta.repo}`);
   if (!SHA.test(meta.katkiCommit)) throw new Error(`Invalid commit hash: ${meta.katkiCommit}`);
-  if (!isAddress(meta.vault)) throw new Error(`Invalid vault address: ${meta.vault}`);
-  const json = JSON.stringify({ app: "tributary", repo: meta.repo, katkiCommit: meta.katkiCommit, vault: getAddress(meta.vault) });
+  const target = meta.vault !== undefined ? { vault: meta.vault } : { recipient: meta.recipient };
+  const addr = (target as { vault?: string; recipient?: string }).vault ?? (target as { recipient?: string }).recipient;
+  if (!addr || !isAddress(addr)) throw new Error(`Invalid fee recipient address: ${addr}`);
+  const key = meta.vault !== undefined ? "vault" : "recipient";
+  const json = JSON.stringify({ app: "tributary", repo: meta.repo, katkiCommit: meta.katkiCommit, [key]: getAddress(addr) });
   return `${DATA_JSON_PREFIX};base64,${toBase64(json)}`;
 }
 
@@ -62,6 +70,12 @@ export function decodeTributaryMetadata(uri: string | null | undefined): Tributa
   if (o.app !== "tributary") return null;
   if (typeof o.repo !== "string" || !REPO.test(o.repo)) return null;
   if (typeof o.katkiCommit !== "string" || !SHA.test(o.katkiCommit)) return null;
-  if (typeof o.vault !== "string" || !isAddress(o.vault)) return null;
-  return { app: "tributary", repo: o.repo, katkiCommit: o.katkiCommit, vault: getAddress(o.vault) };
+  const out: TributaryMeta = { app: "tributary", repo: o.repo, katkiCommit: o.katkiCommit };
+  for (const k of ["vault", "recipient"] as const) {
+    if (o[k] === undefined) continue;
+    const v = o[k];
+    if (typeof v !== "string" || !isAddress(v)) return null; // present but not an address: garbage
+    out[k] = getAddress(v);
+  }
+  return out;
 }

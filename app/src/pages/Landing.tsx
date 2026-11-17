@@ -195,8 +195,8 @@ export function Landing() {
               {feeBps !== undefined ? `${fmt.pct(feeBps / 100, feeBps % 100 ? 2 : 0)} of every buy and sell is the trading fee. ${fmt.pct(protocolPct, 0)} of it goes to the protocol; the rest goes to a fee vault that splits it across the wallets in .katki.json by commit share.` : "Every buy and sell pays a trading fee. Part of it goes to the protocol; the rest goes to a fee vault that splits it across the wallets in .katki.json by commit share."} Each contributor claims their part when they want it. After graduation, trading fees go to liquidity positions held by the launch owner, who adds them to the vault; that step is not automatic.
             </p>
             <ul className="rules">
-              <li><IconCheck /><span><b>Split by commit share.</b> Shares come from GitHub commit counts, read when the launch is made. The vault holds the 5 contributors with the most commits, and the site lists who is in and who is not.</span></li>
-              <li><IconLock /><span><b>The split is fixed.</b> The recipients and shares are written into the vault at creation. The vault owner is the wallet that opened the launch, and cannot change who is paid.</span></li>
+              <li><IconCheck /><span><b>Split by commit share.</b> Shares come from GitHub commit counts, read when the launch is made. A vault holds the 1 to 5 contributors with the most commits (with one contributor, the fee goes straight to that wallet), and the site lists who is in and who is not.</span></li>
+              <li><IconLock /><span><b>The split is fixed.</b> The recipients and shares are written into the vault, or the single recipient into the launch configuration, at creation. Nobody can change who is paid.</span></li>
               <li><IconDown /><span><b>Fees wait until claimed.</b> They accrue in the launch contract and move into the vault when a contributor claims, then to that contributor's wallet.</span></li>
             </ul>
           </div>
@@ -258,7 +258,7 @@ export function Landing() {
           <div className="panel">
             <div className="panel-hd"><h3>Before you launch</h3></div>
             <ul className="rules" style={{ margin: 0, padding: 16 }}>
-              <li><IconCheck /><span>A public GitHub repository, with at least 2 listed contributors who have commits</span></li>
+              <li><IconCheck /><span>A public GitHub repository with at least 1 listed contributor who has commits</span></li>
               <li><IconCheck /><span><span className="mono">.katki.json</span> on the default branch, with each person's GitHub handle and wallet</span></li>
               <li><IconCheck /><span>A wallet on GIWA Sepolia with test ETH for gas</span></li>
             </ul>

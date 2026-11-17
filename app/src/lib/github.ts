@@ -157,10 +157,10 @@ async function api(deps: Deps, path: string, allow: number[] = []): Promise<Resp
 
 /* ------------------------------------------------------------------ reads */
 
-export function getRepoInfo(ref: RepoRef, deps: Deps = defaultDeps()): Promise<RepoInfo> {
+export function getRepoInfo(ref: RepoRef, deps: Deps = defaultDeps(), fresh = false): Promise<RepoInfo> {
   return once(deps, `info:${ref.owner}/${ref.name}`.toLowerCase(), async () => {
     const key = `repo:${ref.owner}/${ref.name}`.toLowerCase();
-    const hit = readCache<RepoInfo>(deps, key, true);
+    const hit = fresh ? undefined : readCache<RepoInfo>(deps, key, true);
     if (hit) return hit;
     const res = await api(deps, `/repos/${ref.owner}/${ref.name}`);
     const j = (await res.json()) as { full_name?: string; default_branch?: string; stargazers_count?: number; language?: string | null; private?: boolean; html_url?: string };
@@ -172,9 +172,10 @@ export function getRepoInfo(ref: RepoRef, deps: Deps = defaultDeps()): Promise<R
 }
 
 /** Latest commit on the default branch: the pinned commit the file is read at and recorded with. */
-export async function getHeadSha(ref: RepoRef, branch: string, deps: Deps = defaultDeps()): Promise<string> {
+export async function getHeadSha(ref: RepoRef, branch: string, deps: Deps = defaultDeps(), fresh = false): Promise<string> {
   const key = `head:${ref.owner}/${ref.name}@${branch}`.toLowerCase();
-  const hit = readCache<string>(deps, key, false);
+  // `fresh` (the Create form) skips the cache and overwrites it, so "Check again" always sees the newest commit
+  const hit = fresh ? undefined : readCache<string>(deps, key, false);
   if (hit) return hit;
   const res = await api(deps, `/repos/${ref.owner}/${ref.name}/commits/${encodeURIComponent(branch)}`);
   const j = (await res.json()) as { sha?: string };

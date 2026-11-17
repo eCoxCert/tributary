@@ -25,7 +25,9 @@ export type VaultFacts = {
 };
 
 export type VerifyInput = {
-  metaVault: string;
+  /** Exactly one of these two must be set by the launch metadata. */
+  metaVault?: string;
+  metaRecipient?: string;
   partnerRecipient: string;
   creatorShareOfNonProtocolBps: number;
   creator: string;
@@ -49,24 +51,37 @@ const eq = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
 export function verifyTributaryLaunch(i: VerifyInput): Verification {
   const problems: string[] = [];
   const reasons: string[] = [];
+  const direct = i.metaRecipient !== undefined && i.metaVault === undefined;
+  const vaulted = i.metaVault !== undefined && i.metaRecipient === undefined;
+  const target = direct ? i.metaRecipient : i.metaVault;
 
-  if (!eq(i.partnerRecipient, i.metaVault)) problems.push("The launch's fee recipient is not the vault named in its metadata, so trading fees do not go to that vault.");
-  if (i.creatorShareOfNonProtocolBps !== 0) problems.push("The launch gives part of the trading fee to its creator instead of sending all of it to the vault.");
+  if (!direct && !vaulted) {
+    problems.push(i.metaVault !== undefined ? "The launch metadata names both a fee vault and a direct recipient." : "The launch metadata names neither a fee vault nor a direct recipient.");
+  } else if (!eq(i.partnerRecipient, target as string)) {
+    problems.push(direct ? "The launch's fee recipient is not the wallet named in its metadata, so trading fees do not go to that wallet." : "The launch's fee recipient is not the vault named in its metadata, so trading fees do not go to that vault.");
+  }
+  if (i.creatorShareOfNonProtocolBps !== 0) problems.push("The launch gives part of the trading fee to its creator instead of sending all of it to the fee recipient.");
 
-  if (!i.vault) {
-    reasons.push("The fee vault named in the metadata could not be read.");
-  } else {
-    if (!eq(i.vault.owner, i.creator)) problems.push("The fee vault is owned by a different wallet than the one that created the launch.");
-    if (i.vault.recipients.length < 2 || i.vault.recipients.length > 5) problems.push("The fee vault does not have 2 to 5 recipients.");
-    if (!eq(i.vault.token, i.expectedToken) || !eq(i.vault.base, i.expectedToken)) problems.push("The fee vault does not pay out WETH, the token the launch collects fees in.");
-    if (i.vault.fromFactory === false) problems.push("The fee vault was not created by the Ammora fee-sharing factory.");
-    if (i.vault.fromFactory === null) reasons.push("The fee-sharing factory's record of this vault could not be read.");
+  if (vaulted) {
+    if (!i.vault) {
+      reasons.push("The fee vault named in the metadata could not be read.");
+    } else {
+      if (!eq(i.vault.owner, i.creator)) problems.push("The fee vault is owned by a different wallet than the one that created the launch.");
+      if (i.vault.recipients.length < 2 || i.vault.recipients.length > 5) problems.push("The fee vault does not have 2 to 5 recipients.");
+      if (!eq(i.vault.token, i.expectedToken) || !eq(i.vault.base, i.expectedToken)) problems.push("The fee vault does not pay out WETH, the token the launch collects fees in.");
+      if (i.vault.fromFactory === false) problems.push("The fee vault was not created by the Ammora fee-sharing factory.");
+      if (i.vault.fromFactory === null) reasons.push("The fee-sharing factory's record of this vault could not be read.");
+    }
   }
 
   if (i.katki.state === "missing") problems.push("The repository has no .katki.json at the commit recorded in the launch.");
   else if (i.katki.state === "invalid") problems.push("The .katki.json at the recorded commit is not valid.");
   else if (i.katki.state === "unavailable") reasons.push(i.katki.reason);
-  else if (i.vault) {
+  else if (direct) {
+    // one contributor: the file must list exactly this wallet and nobody else
+    const w = i.katki.wallets.map((x) => x.toLowerCase());
+    if (w.length !== 1 || w[0] !== (i.metaRecipient as string).toLowerCase()) problems.push("The .katki.json at the recorded commit does not list exactly the wallet named in the launch.");
+  } else if (vaulted && i.vault) {
     const listed = new Set(i.katki.wallets.map((w) => w.toLowerCase()));
     const stray = i.vault.recipients.filter((r) => !listed.has(r.recipient.toLowerCase()));
     if (stray.length) problems.push(`${stray.length} vault recipient${stray.length > 1 ? "s are" : " is"} not listed in .katki.json at the recorded commit.`);

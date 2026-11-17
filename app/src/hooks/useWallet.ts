@@ -19,7 +19,7 @@ export function useWallet() {
   const fw: string | null = import.meta.env.DEV && typeof window !== "undefined" ? new URLSearchParams(window.location.hash.split("?")[1] ?? "").get("fw") : null;
   const status0: WalletStatus = !isConnected ? "disconnected" : chainId !== CHAIN_ID ? "wrong" : "connected";
 
-  const fxWallet = import.meta.env.DEV && fw ? (fw === "wrong" ? { status: "wrong" as WalletStatus, address: "0x1111111111111111111111111111111111111111" } : fw === "owner" ? { status: "connected" as WalletStatus, address: "0x1111111111111111111111111111111111111111" } : fw === "me" ? { status: "connected" as WalletStatus, address: "0x776613ba8b8608F1e0805a1d87C902FE76cd9c30" } : null) : null;
+  const fxWallet = import.meta.env.DEV && fw ? (fw === "wrong" ? { status: "wrong" as WalletStatus, address: "0x1111111111111111111111111111111111111111" } : fw === "owner" ? { status: "connected" as WalletStatus, address: "0x1111111111111111111111111111111111111111" } : fw === "contrib" ? { status: "connected" as WalletStatus, address: "0xF581FaB98DF08d1f54ecE2a1Bb8Ce58e3fe56Ca8" } : fw === "me" ? { status: "connected" as WalletStatus, address: "0x776613ba8b8608F1e0805a1d87C902FE76cd9c30" } : null) : null;
   const status: WalletStatus = fxWallet ? fxWallet.status : status0;
 
   const connect = useCallback(async () => {

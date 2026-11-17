@@ -58,9 +58,10 @@ describe("readRepository", () => {
   it("fails validation for a non-contributor", async () => {
     expect((await readRepository("o/r", deps(file(["a", "ghost"]), [{ login: "a", contributions: 3 }]))).stage).toBe("invalid");
   });
-  it("blocks with one eligible contributor", async () => {
+  it("one eligible contributor is paid directly, no vault", async () => {
     const r = await readRepository("o/r", deps(file(["a"]), [{ login: "a", contributions: 3 }]));
-    expect(r.stage === "found" && !r.selection.ok).toBe(true);
+    expect(r.stage === "found" && r.selection.ok && r.selection.mode).toBe("direct");
+    expect(r.stage === "found" && r.selection.included.map((x) => (x as { bps: number }).bps)).toEqual([10000]);
   });
   it("rejects a bad repo string", async () => {
     expect((await readRepository("nope", deps(null, []))).stage).toBe("error");

@@ -7,6 +7,8 @@ import {
   readCurveSnapshot,
   readTemplateConfig,
   readVaultSnapshot,
+  readDirectSnapshot,
+  type DirectSnapshot,
   type CurveSnapshot,
   type DiscoveryState,
   type LaunchRecord,
@@ -88,6 +90,8 @@ export type Card = {
   rec: LaunchRecord;
   snap: CurveSnapshot;
   vault: VaultSnapshot | null;
+  /** Single-recipient launches: what waits in the fee store for that wallet. */
+  direct: DirectSnapshot | null;
   timestamp: number | null;
   /** Chain check of a Tributary claim; null for launches that make no such claim. */
   verified: Verification | null;
@@ -96,12 +100,13 @@ export type Card = {
 /** Chain data only. The GitHub-backed verification is a separate, lazy query (see useCards). */
 async function readCard(rec: LaunchRecord): Promise<Card> {
   if (import.meta.env.DEV && fx()?.startsWith("list")) return (await import("../fixtures/tributary")).fixtureCard(rec, fx() === "list-loading");
-  const [snap, vault, block] = await Promise.all([
+  const [snap, vault, direct, block] = await Promise.all([
     readCurveSnapshot(rec.curve, rec.token),
-    rec.meta ? readVaultSnapshot(rec.meta.vault).catch(() => null) : Promise.resolve(null),
+    rec.meta?.vault ? readVaultSnapshot(rec.meta.vault).catch(() => null) : Promise.resolve(null),
+    rec.meta?.recipient && !rec.meta.vault ? readDirectSnapshot(rec.meta.recipient).catch(() => null) : Promise.resolve(null),
     publicClient.getBlock({ blockNumber: rec.block }).catch(() => null),
   ]);
-  return { rec, snap, vault, timestamp: block ? Number(block.timestamp) * 1000 : null, verified: null };
+  return { rec, snap, vault, direct, timestamp: block ? Number(block.timestamp) * 1000 : null, verified: null };
 }
 
 async function readVerification(card: Card): Promise<Verification> {
@@ -200,4 +205,14 @@ export function usePayouts(vaults: { vault: Address; block: bigint }[]) {
       return out;
     },
   });
+}
+
+/** Fees earned by the launch's fee recipient(s): vault total, or what waits for the single wallet. Null when unknown. */
+export function cardFees(c: Card): bigint | null {
+  if (c.vault) return c.vault.totalFunded + c.vault.pendingInFeeVault;
+  if (c.direct) return c.direct.pending;
+  return null;
+}
+export function cardRecipients(c: Card): number | null {
+  return c.vault ? c.vault.recipients.length : c.direct ? 1 : null;
 }

@@ -6,7 +6,8 @@ import { TradePanel } from "../components/TradePanel";
 import { ContribPanel } from "../components/ContribPanel";
 import { AllocationPanel } from "../components/AllocationPanel";
 import { statusFromCode } from "../components/LaunchRows";
-import { NotFoundError, useAllocation, useBlockTime, useKatkiInfo, useLaunch, useLaunchRecord, useVault } from "../hooks/useLaunch";
+import { DirectPanel } from "../components/DirectPanel";
+import { NotFoundError, useDirect, useAllocation, useBlockTime, useKatkiInfo, useLaunch, useLaunchRecord, useVault } from "../hooks/useLaunch";
 import { ADDR, explorerAddress } from "../lib/chain";
 import { curveTotals, humanPrice, positionAt, rawPrice, sampleCurve } from "../lib/curveMath";
 import { fmt } from "../lib/format";
@@ -27,18 +28,20 @@ export function Launch() {
   const rec = useLaunchRecord(token, !!data && needRec);
   const launchedAt = useBlockTime(rec.data?.block);
   const vault = useVault(meta?.vault);
+  const direct = useDirect(meta?.recipient && !meta.vault ? meta.recipient : undefined);
+  const isDirect = !!meta?.recipient && !meta.vault;
   const info = useKatkiInfo(meta);
   // null while anything is still loading: the page must never look verified before every check has finished
   const verification: Verification | null = useMemo(() => {
     if (!meta || !data) return null;
-    if (vault.isPending || info.isPending) return null;
+    if ((!!meta.vault && vault.isPending) || info.isPending) return null;
     return verifyLaunch({
       meta,
       partnerRecipient: data.snap.config.partnerRecipient,
       creatorShareOfNonProtocolBps: data.snap.config.creatorShareOfNonProtocolBps,
       creator: data.snap.state.creator,
       quoteToken: ADDR.weth,
-      vault: vault.data ?? null,
+      vault: meta.vault ? vault.data ?? null : null,
       katki: info.data ? info.data.katki : { state: "unavailable", reason: "network" },
       provenance: info.data ? info.data.provenance : { state: "unavailable", reason: "network" },
       handles: info.data ? info.data.handles : { state: "unavailable", reason: "network" },
@@ -91,7 +94,7 @@ export function Launch() {
           <div className="panel">
             <div className="notice notice-c">
               <h3>This token was not launched with Tributary</h3>
-              <p>{data.snap.name} ({data.snap.symbol}) is an Ammora launch, but its metadata does not name a repository and fee vault, so Tributary does not list it.</p>
+              <p>{data.snap.name} ({data.snap.symbol}) is an Ammora launch, but its metadata does not name a repository and fee recipient, so Tributary does not list it.</p>
               <Link className="btn btn-sm" to="/launches">See Tributary launches</Link>
             </div>
           </div>
@@ -124,7 +127,7 @@ export function Launch() {
         {verification?.status === "mismatch" && (
           <div style={{ marginBottom: 24 }}>
             <Banner kind="warn">
-              <b>This launch does not follow Tributary's rules.</b> Its metadata names a repository and a fee vault, but the chain or the repository does not back that up, so Tributary shows no contributors, split or fee claims for it.
+              <b>This launch does not follow Tributary's rules.</b> Its metadata names a repository and a fee recipient, but the chain or the repository does not back that up, so Tributary shows no contributors, split or fee claims for it.
               <ul className="err-list" style={{ marginTop: 8 }}>{verification.problems.map((x, i) => <li key={i}>{x}</li>)}</ul>
               <p style={{ marginTop: "var(--s-2)" }}>Price, curve and quotes below are real.</p>
             </Banner>
@@ -133,7 +136,7 @@ export function Launch() {
         {verification?.status === "unverifiable" && (
           <div style={{ marginBottom: 24 }}>
             <Banner kind="warn" action={<button className="btn btn-sm" type="button" onClick={() => { void vault.refetch(); void info.refetch(); }}>Check again</button>}>
-              <b>Could not check this launch right now.</b> Tributary could not confirm its repository and fee vault, so it shows no contributors, split or fee claims. Nothing was sent; your funds are not affected.
+              <b>Could not check this launch right now.</b> Tributary could not confirm its repository and fee recipient, so it shows no contributors, split or fee claims. Nothing was sent; your funds are not affected.
               <ul className="err-list" style={{ marginTop: 8 }}>{verification.reasons.map((x, i) => <li key={i}>{x}</li>)}</ul>
               <p style={{ marginTop: "var(--s-2)" }}>Price, curve and quotes below are real.</p>
             </Banner>
@@ -211,14 +214,14 @@ export function Launch() {
           </section>
 
           <aside className="l-side" aria-label="Trade">
-            <TradePanel data={data} recipients={tributary && vault.data ? vault.data.recipients.length : null} />
+            <TradePanel data={data} recipients={tributary ? (isDirect ? 1 : vault.data ? vault.data.recipients.length : null) : null} />
             {tributary && (
               <section className="panel">
                 <div className="panel-hd"><h2>Where the fee goes</h2></div>
                 <dl className="kv" style={{ padding: "4px 16px 12px" }}>
                   <div><dt>Protocol</dt><dd>{fmt.pct(protocolPct, 0)} of the fee</dd></div>
-                  <div><dt>Fee vault</dt><dd>{fmt.pct(100 - protocolPct, 0)} of the fee</dd></div>
-                  <div><dt>Contributors</dt><dd>{vault.data ? `${vault.data.recipients.length}, by commit share` : "–"}</dd></div>
+                  <div><dt>{isDirect ? "Contributor" : "Fee vault"}</dt><dd>{fmt.pct(100 - protocolPct, 0)} of the fee</dd></div>
+                  <div><dt>Paid to</dt><dd>{isDirect ? "One wallet, no vault" : vault.data ? `${vault.data.recipients.length} contributors, by commit share` : "–"}</dd></div>
                 </dl>
               </section>
             )}
@@ -227,15 +230,19 @@ export function Launch() {
           {checking && (
             <section className="panel a-contrib"><div className="panel-hd"><h2>Contributors and fees</h2></div><table className="ledger stack contrib"><tbody><tr><td className="full"><Sk w="60%" /></td></tr><tr><td className="full"><Sk w="50%" /></td></tr><tr><td className="full"><Sk w="55%" /></td></tr></tbody></table></section>
           )}
-          {tributary && meta && vault.data && (
+          {tributary && meta && (isDirect ? direct.data : vault.data) && (
             <>
-              <ContribPanel vault={vault.data} info={info.data} infoLoading={false} meta={meta} />
+              {isDirect && direct.data ? (
+                <DirectPanel direct={direct.data} info={info.data} meta={meta} />
+              ) : vault.data ? (
+                <ContribPanel vault={vault.data} info={info.data} infoLoading={false} meta={meta} />
+              ) : null}
               <AllocationPanel
                 token={data.token}
                 symbol={snap.symbol}
                 decimals={snap.decimals}
                 creator={snap.state.creator}
-                vault={vault.data}
+                recipients={isDirect && direct.data ? [{ recipient: direct.data.recipient, share: 10_000n }] : (vault.data?.recipients ?? []).map((r) => ({ recipient: r.recipient, share: r.share }))}
                 info={info.data}
                 alloc={alloc.data}
                 loading={rec.isPending || alloc.isPending}

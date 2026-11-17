@@ -16,6 +16,7 @@ export function verifyLaunch(p: {
 }): Verification {
   return verifyTributaryLaunch({
     metaVault: p.meta.vault,
+    metaRecipient: p.meta.recipient,
     partnerRecipient: p.partnerRecipient,
     creatorShareOfNonProtocolBps: p.creatorShareOfNonProtocolBps,
     creator: p.creator,

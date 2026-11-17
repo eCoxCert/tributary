@@ -9,6 +9,9 @@ const OUT = resolve(process.cwd(), "screens");
 mkdirSync(OUT, { recursive: true });
 const states: { name: string; q: string; ready: string }[] = [
   { name: "ok", q: "fixture=ok", ready: ".a-alloc" },
+  { name: "direct", q: "fixture=direct", ready: ".a-alloc" },
+  { name: "direct-claim", q: "fixture=direct&fw=contrib", ready: ".is-you .btn-primary" },
+  { name: "direct-owner", q: "fixture=direct&fw=owner", ready: ".a-alloc .btn-primary" },
   { name: "claim", q: "fixture=ok&fw=me", ready: ".is-you" },
   { name: "owner-send", q: "fixture=ok&fw=owner", ready: ".a-alloc .btn-primary" },
   { name: "mismatch", q: "fixture=mismatch", ready: ".banner-warn" },
@@ -24,14 +27,15 @@ const lists: { name: string; hash: string; ready: string }[] = [
   { name: "list-home", hash: "#/?fixture=list", ready: "#live .ledger tbody tr .tag" },
   { name: "list-home-loading", hash: "#/?fixture=list-loading", ready: "#live .sk" },
 ];
+if (process.env.ONLY_MISSING) { states.length = 0; lists.length = 0; } // quick re-shot of the create guide only
 const report: unknown[] = [];
 const browser = await chromium.launch({ channel: "chrome", headless: true });
-for (const [width, height] of [[1440, 900], [1280, 800], [1024, 768], [768, 1024], [375, 812]] as const) {
+for (const [width, height] of (process.env.ONLY_MISSING ? [] : [[1440, 900], [1280, 800], [1024, 768], [768, 1024], [375, 812]]) as readonly (readonly [number, number])[]) {
   for (const theme of ["light", "dark"] as const) {
     const ctx = await browser.newContext({ viewport: { width, height }, colorScheme: theme });
     await ctx.addInitScript((t) => localStorage.setItem("trib-theme", t), theme);
     for (const s of states) {
-      if (theme === "dark" && !["ok", "mismatch", "unverifiable"].includes(s.name)) continue;
+      if (theme === "dark" && !["ok", "direct", "mismatch", "unverifiable"].includes(s.name)) continue;
       const page = await ctx.newPage();
       const errors: string[] = [];
       page.on("console", (m) => { if (m.type() === "error") errors.push(m.text().slice(0, 200)); });
@@ -70,6 +74,28 @@ for (const [width, height] of [[1440, 900], [1280, 800], [1024, 768], [768, 1024
     await page.close();
   }
   await ctx.close();
+}
+for (const [width, height] of [[1440, 900], [375, 812]] as const) {
+  for (const [label, q] of [["", ""], ["-wallet", "?fw=contrib"]] as const) {
+    const ctx = await browser.newContext({ viewport: { width, height }, colorScheme: "light" });
+    await ctx.addInitScript(() => localStorage.setItem("trib-theme", "light"));
+    const page = await ctx.newPage();
+    const errors: string[] = [];
+    page.on("console", (m) => { if (m.type() === "error") errors.push(m.text().slice(0, 200)); });
+    page.on("pageerror", (e) => errors.push("pageerror: " + e.message));
+    await page.goto(`${BASE}#/create${q}`);
+    await page.fill("#repo", "octocat/Hello-World");
+    await page.click("text=Read repository");
+    try { await page.waitForSelector("#katki .btn-primary", { timeout: 45_000 }); } catch { errors.push("not ready: missing guide (GitHub unreachable or rate limited?)"); }
+    await page.waitForTimeout(800);
+    const m = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth, href: (document.querySelector("#katki a.btn-primary") as HTMLAnchorElement | null)?.href ?? "", rel: (document.querySelector("#katki a.btn-primary") as HTMLAnchorElement | null)?.rel ?? "" }));
+    const file = `fixture-create-missing${label}-light-${width}.png`;
+    await page.screenshot({ path: resolve(OUT, file), fullPage: true });
+    console.log(file.padEnd(46), m.sw > m.cw ? "OVERFLOW" : "no overflow", `errors=${errors.length}`, m.rel, m.href.slice(0, 80));
+    errors.forEach((e) => console.log("   ! " + e));
+    report.push({ file, overflow: m.sw > m.cw, errors });
+    await ctx.close();
+  }
 }
 await browser.close();
 writeFileSync(resolve(OUT, "fixture-report.json"), JSON.stringify(report, null, 2));

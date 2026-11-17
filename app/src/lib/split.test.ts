@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { commitsToBps, rankByCommits, selectVaultRecipients, type Weighted } from "./split";
+import { commitsToBps, planRecipients, rankByCommits, selectVaultRecipients, type Weighted } from "./split";
 
 const w = (github: string, commits: number): Weighted => ({ github, wallet: "0x" + "1".repeat(40), commits });
 const sum = (a: number[]) => a.reduce((x, y) => x + y, 0);
@@ -66,5 +66,25 @@ describe("selectVaultRecipients", () => {
   });
   it("ignores entries without commits", () => {
     expect(selectVaultRecipients([w("a", 0), w("b", 4)]).ok).toBe(false);
+  });
+});
+
+describe("planRecipients (who gets the fee)", () => {
+  it("exactly one eligible contributor: direct payment, 100%, no vault", () => {
+    const p = planRecipients([w("solo", 40)]);
+    expect(p.ok && p.mode).toBe("direct");
+    expect(p.included.map((x) => x.bps)).toEqual([10_000]);
+    expect(p.excluded).toEqual([]);
+  });
+  it("two to five or more: the fee vault", () => {
+    const two = planRecipients([w("a", 5), w("b", 5)]);
+    expect(two.ok && two.mode).toBe("vault");
+    expect(planRecipients([1, 2, 3, 4, 5, 6, 7].map((n) => w("u" + n, n))).included).toHaveLength(5);
+  });
+  it("nobody eligible: blocked with a reason", () => {
+    const p = planRecipients([]);
+    expect(p.ok).toBe(false);
+    if (!p.ok) expect(p.reason).toMatch(/nobody to pay/);
+    expect(planRecipients([w("x", 0)]).ok).toBe(false);
   });
 });
