@@ -20,7 +20,7 @@ const routes: Route[] = [
   { name: "launches-all", hash: "#/launches?all=1", ready: ".ledger tbody tr" },
   { name: "launch-real", hash: `#/launch/${TOKEN}?all=1`, ready: ".curve-stats" },
   { name: "create", hash: "#/create", ready: "#repo" },
-  { name: "contribFile", hash: "#/format", ready: "h1" },
+  { name: "format", hash: "#/format", ready: "h1" },
 ];
 
 mkdirSync(OUT, { recursive: true });
