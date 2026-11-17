@@ -39,7 +39,7 @@ describe("github cache and errors", () => {
     let t = 0;
     const deps: Deps = { fetch: async () => { calls++; return res(200, []); }, storage: mem(), now: () => t };
     await getContributors(ref, deps);
-    t = 11 * 60 * 1000;
+    t = 7 * 3600 * 1000;
     await getContributors(ref, deps);
     expect(calls).toBe(2);
   });
@@ -53,7 +53,7 @@ describe("github cache and errors", () => {
     try {
       await getContributors(ref, deps);
     } catch (e) {
-      expect((e as GitHubError).message).toMatch(/60 anonymous requests per hour/);
+      expect((e as GitHubError).message).toMatch(/hourly limit for this browser was reached/);
       expect((e as GitHubError).resetAt).toBeInstanceOf(Date);
     }
   });
@@ -65,13 +65,13 @@ describe("github cache and errors", () => {
     const deps: Deps = { fetch: async () => res(404, {}), storage: null, now: () => 0 };
     await expect(getHeadSha(ref, "main", deps)).rejects.toMatchObject({ kind: "not-found" });
   });
-  it("returns null for a missing .katki.json and caches that answer", async () => {
+  it("returns null for a missing .katki.json and does not cache that answer", async () => {
     let calls = 0;
     const deps: Deps = { fetch: async () => { calls++; return res(404, "404: Not Found"); }, storage: mem(), now: () => 0 };
     const sha = "a".repeat(40);
     expect(await getKatkiText(ref, sha, deps)).toBeNull();
     expect(await getKatkiText(ref, sha, deps)).toBeNull();
-    expect(calls).toBe(1);
+    expect(calls).toBe(2);
   });
   it("pages through contributors until a short page", async () => {
     const page = (n: number) => Array.from({ length: n }, (_, i) => ({ login: `u${i}`, contributions: 1 }));

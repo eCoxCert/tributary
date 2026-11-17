@@ -47,6 +47,16 @@ M = [
     ("src/lib/visibility.ts", "if (!hasMeta || !v) return false;", "if (!v) return false;", "non-Tributary token listed"),
     ("src/lib/visibility.ts", "n === 1 ? word", "n === 0 ? word", "singular/plural wrong"),
     ("src/lib/visibility.ts", "if (p.anyPending && p.visible === 0) return \"loading\";", "", "empty flashes while cards load"),
+    ("src/lib/visibility.ts", "if (verifiedRepo) return verifiedRepo;", "return verifiedRepo ?? symbol;", "token symbol or name shown as a repo title"),
+    ("src/lib/github.ts", 'if (lim !== null) throw new GitHubError("rate-limit", rateLimitMessage(lim, deps.now()), new Date(lim)); // no request while limited', "", "requests sent while rate limited"),
+    ("src/lib/github.ts", "export const TTL_LONG_MS = 6 * 60 * 60 * 1000;", "export const TTL_LONG_MS = 10 * 60 * 1000;", "positive cache shorter than 6 h"),
+    ("src/lib/github.ts", "if (res.status === 404) return null;", 'if (res.status === 404) { writeCache(deps, key, { text: "" }); return null; }', "negative answer cached"),
+    ("src/lib/github.ts", "@${sha}->${branch}", "@${sha}", "ancestor cache key without branch"),
+    ("src/lib/github.ts", "if (page === 5) truncated = true;", "", "cut-off contributor list not noticed"),
+    ("src/lib/github.ts", "return j.length > 0;\n  });", "return true;\n  });", "exact author check always yes"),
+    ("src/lib/katkiCheck.ts", 'if (!truncated) return { state: "mismatch"', 'if (false) return { state: "mismatch"', "complete list also triggers exact checks"),
+    ("src/lib/github.ts", "if (hit) return hit as Promise<T>;", "", "no sharing of calls per repo"),
+    ("src/lib/katkiCheck.ts", "if (missing.length > MAX_EXACT_CHECKS)", "if (false)", "unbounded exact checks"),
 ]
 bad = 0
 for path, old, new, what in M:

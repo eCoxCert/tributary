@@ -1,10 +1,10 @@
 import { useTitle } from "../hooks/useTitle";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Av, IconCheck, IconDown, IconLock, SkeletonRows, StatusTag } from "../components/ui";
+import { Av, IconCheck, IconDown, IconLock, StatusTag } from "../components/ui";
 import { CurveChart } from "../components/CurveChart";
 import { FeeRouter, type RouterRow } from "../components/FeeRouter";
-import { LaunchRow, LaunchesHead, isListed, statusFromCode } from "../components/LaunchRows";
+import { LaunchRow, LaunchSkeletonRows, LaunchesHead, isListed, statusFromCode } from "../components/LaunchRows";
 import { useCards, useDiscovery, usePayouts, useTemplate, type Card } from "../hooks/useChainData";
 import { AMMORA_PROTOCOL_TRADING_FEE_SHARE_BPS } from "@ammora-protocol/sdk";
 import { fmt } from "../lib/format";
@@ -21,7 +21,7 @@ export function Landing() {
   useTitle("Token launches that pay a repo's contributors");
   const d = useDiscovery(false);
   const tpl = useTemplate();
-  const recs = d.launches.slice(0, 12);
+  const recs = d.launches.slice(0, 8); // at most what the page can show: each verified launch costs GitHub requests
   const queries = useCards(recs);
   const cards = (queries.map((q) => q.data).filter(Boolean) as Card[]).filter((c) => isListed(c, false));
   const visible = recs.map((rec, i) => ({ rec, q: queries[i]! })).filter((x) => !x.q.data || isListed(x.q.data, false));
@@ -175,7 +175,7 @@ export function Landing() {
                     </td>
                   </tr>
                 ) : d.scanning && recs.length === 0 ? (
-                  <SkeletonRows rows={4} cols={7} />
+                  <LaunchSkeletonRows rows={4} />
                 ) : (
                   live.slice(0, 5).map((x) => <LaunchRow key={x.rec.curve} rec={x.rec} q={x.q} />)
                 )}

@@ -1,8 +1,9 @@
 import { useTitle } from "../hooks/useTitle";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { Banner, SkeletonRows } from "../components/ui";
-import { LaunchRow, LaunchesHead, isListed, statusOf } from "../components/LaunchRows";
+import { Banner } from "../components/ui";
+import { rateLimitNote } from "../lib/github";
+import { LaunchRow, LaunchSkeletonRows, LaunchesHead, isListed, statusOf } from "../components/LaunchRows";
 import { useCards, useDiscovery, type Card } from "../hooks/useChainData";
 import { fmt } from "../lib/format";
 import { listState, plural } from "../lib/visibility";
@@ -22,7 +23,9 @@ export function Explore() {
   const [limit, setLimit] = useState(PAGE);
 
   const recs = d.launches.slice(0, limit);
-  const queries = useCards(recs);
+  const [seen, setSeen] = useState<ReadonlySet<string>>(new Set());
+  const markSeen = useCallback((curve: string) => setSeen((s) => (s.has(curve) ? s : new Set(s).add(curve))), []);
+  const queries = useCards(recs, seen);
   const cards: (Card | undefined)[] = queries.map((q) => q.data);
   const settled = cards.filter(Boolean).length;
   const visibleCards = (cards.filter(Boolean) as Card[]).filter((c) => isListed(c, debug));
@@ -116,7 +119,7 @@ export function Explore() {
             <LaunchesHead />
             <tbody>
               {state === "loading" ? (
-                <SkeletonRows rows={6} cols={7} />
+                <LaunchSkeletonRows rows={6} />
               ) : state === "empty" ? (
                 <tr>
                   <td className="full" colSpan={7}>
@@ -142,12 +145,13 @@ export function Explore() {
                   </td>
                 </tr>
               ) : (
-                view.map((it) => <LaunchRow key={it.rec.curve} rec={it.rec} q={it.q} debug={debug} />)
+                view.map((it) => <LaunchRow key={it.rec.curve} rec={it.rec} q={it.q} debug={debug} onVisible={() => markSeen(it.rec.curve)} />)
               )}
             </tbody>
           </table>
         </div>
 
+        {visibleCards.some((c) => c.verified?.status === "unverifiable") && rateLimitNote() && <p className="hint" style={{ marginTop: 12 }}>{rateLimitNote()}</p>}
         <p className="hint" id="count" style={{ marginTop: 12 }} title={d.scannedFrom !== null ? `Blocks ${d.scannedFrom} to ${d.head}` : undefined}>
           {d.scanning && recs.length === 0
             ? "Reading launches from GIWA Sepolia…"
