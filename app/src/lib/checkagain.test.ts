@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { readRepository } from "./readRepo";
-import { githubNewFileUrl, parseKatki, templateFor } from "./katki";
+import { githubNewFileUrl, parseContribFile, templateFor } from "./contribFile";
 import type { Deps } from "./github";
 
 const SHA1 = "1".repeat(40);
@@ -32,7 +32,7 @@ describe("Check again uses the newest commit", () => {
     });
     const first = await readRepository("o/r", deps());
     expect(first.stage).toBe("missing");
-    head = SHA2; // the user pushes .katki.json
+    head = SHA2; // the user pushes .tributary.json
     const second = await readRepository("o/r", deps());
     expect(second.stage).toBe("found");
     if (second.stage === "found") expect(second.sha).toBe(SHA2);
@@ -47,10 +47,10 @@ describe("making the file easy to create", () => {
   });
   it("a template with a filled wallet for the only contributor validates", () => {
     const text = templateFor([{ login: "solo", contributions: 9 }], 4, { github: "solo", wallet: "0x8c1F0000000000000000000000000000000a4a2E".toLowerCase() });
-    expect(parseKatki(text).ok).toBe(true);
+    expect(parseContribFile(text).ok).toBe(true);
   });
   it("a template that still has placeholders is rejected by the validator", () => {
-    expect(parseKatki(templateFor([{ login: "solo", contributions: 9 }])).ok).toBe(false);
+    expect(parseContribFile(templateFor([{ login: "solo", contributions: 9 }])).ok).toBe(false);
   });
   it("encodes the file content, even when it contains % or &", () => {
     const json = 'a%41&b=c';
@@ -59,7 +59,7 @@ describe("making the file easy to create", () => {
   });
   it("builds GitHub's new-file link with the name and the encoded content", () => {
     const url = githubNewFileUrl({ owner: "eCoxCert", name: "tributary" }, "main", '{ "version": 1 }');
-    expect(url.startsWith("https://github.com/eCoxCert/tributary/new/main?filename=.katki.json&value=")).toBe(true);
+    expect(url.startsWith("https://github.com/eCoxCert/tributary/new/main?filename=.tributary.json&value=")).toBe(true);
     expect(decodeURIComponent(url.split("value=")[1] as string)).toBe('{ "version": 1 }');
   });
 });

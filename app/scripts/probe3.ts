@@ -9,7 +9,7 @@ const rnd = (): Address => getAddress(("0x" + randomBytes(20).toString("hex")) a
 const owner = rnd();
 const sel = selectVaultRecipients([120, 60, 15].map((c, i) => ({ github: `u${i}`, wallet: rnd(), commits: c })));
 if (!sel.ok) throw new Error("x");
-const plan = await buildCreatePlan({ owner, repo: "a/b", katkiCommit: "abcdef1", recipients: sel.included.map((i) => ({ wallet: i.wallet as Address, bps: i.bps })), name: "T", symbol: "TT" }, publicClient);
+const plan = await buildCreatePlan({ owner, repo: "a/b", fileCommit: "abcdef1", recipients: sel.included.map((i) => ({ wallet: i.wallet as Address, bps: i.bps })), name: "T", symbol: "TT" }, publicClient);
 const head = await publicClient.getBlockNumber();
 try {
   const r = await createConfigAndPoolWithFirstBuy(publicClient, {

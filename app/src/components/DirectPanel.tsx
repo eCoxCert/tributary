@@ -5,7 +5,7 @@ import type { Address } from "viem";
 import { buildClaimFeeVaultFor } from "@ammora-protocol/sdk";
 import { Av, Banner, Spinner } from "./ui";
 import { useWallet } from "../hooks/useWallet";
-import type { KatkiInfo } from "../hooks/useLaunch";
+import type { ContribFileInfo } from "../hooks/useLaunch";
 import type { DirectSnapshot } from "../lib/launches";
 import { ADDR, explorerAddress, explorerTx, publicClient } from "../lib/chain";
 import { fmt } from "../lib/format";
@@ -13,7 +13,7 @@ import { humanizeError } from "../lib/errors";
 import { sendCalldata } from "../lib/tx";
 
 /** Contributors table for a launch whose fee goes straight to one wallet (no vault). */
-export function DirectPanel({ direct, info, meta }: { direct: DirectSnapshot; info: KatkiInfo | undefined; meta: { repo: string; katkiCommit: string } }) {
+export function DirectPanel({ direct, info, meta }: { direct: DirectSnapshot; info: ContribFileInfo | undefined; meta: { repo: string; fileCommit: string } }) {
   const w = useWallet();
   const { data: wallet } = useWalletClient();
   const qc = useQueryClient();
@@ -50,7 +50,7 @@ export function DirectPanel({ direct, info, meta }: { direct: DirectSnapshot; in
       <div className="panel-hd">
         <h2 id="contrib-h">Contributor and fees</h2>
         <span className="faint" style={{ marginLeft: "auto", fontSize: 13 }}>
-          From <span className="mono">.katki.json</span> at <span className="mono">{meta.katkiCommit.slice(0, 7)}</span>
+          From <span className="mono">.tributary.json</span> at <span className="mono">{meta.fileCommit.slice(0, 7)}</span>
         </span>
       </div>
       <table className="ledger stack contrib">

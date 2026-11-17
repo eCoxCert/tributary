@@ -6,13 +6,13 @@
  *   mismatch      something was checked and does not hold
  *   unverifiable  a check could not be made (network, rate limit, unreadable contract); nothing is claimed
  */
-export type KatkiState =
+export type ContribFileState =
   | { state: "ok"; wallets: string[] }
   | { state: "missing" } // 404 at the recorded commit
   | { state: "invalid" } // the file exists but fails validation
   | { state: "unavailable"; reason: string }; // network / rate limit
 
-/** Checks on the repository side that are independent of the .katki.json text. */
+/** Checks on the repository side that are independent of the .tributary.json text. */
 export type RepoCheck = { state: "ok" } | { state: "mismatch"; detail: string } | { state: "unavailable"; reason: string };
 
 export type VaultFacts = {
@@ -34,7 +34,7 @@ export type VerifyInput = {
   /** Token the vault must pay out (the launch's quote token, WETH). */
   expectedToken: string;
   vault: VaultFacts | null;
-  katki: KatkiState;
+  contribFile: ContribFileState;
   /** Is the recorded commit part of the default branch (not a fork's commit)? */
   provenance: RepoCheck;
   /** Are the listed GitHub handles real contributors of the repository? */
@@ -74,17 +74,17 @@ export function verifyTributaryLaunch(i: VerifyInput): Verification {
     }
   }
 
-  if (i.katki.state === "missing") problems.push("The repository has no .katki.json at the commit recorded in the launch.");
-  else if (i.katki.state === "invalid") problems.push("The .katki.json at the recorded commit is not valid.");
-  else if (i.katki.state === "unavailable") reasons.push(i.katki.reason);
+  if (i.contribFile.state === "missing") problems.push("The repository has no .tributary.json at the commit recorded in the launch.");
+  else if (i.contribFile.state === "invalid") problems.push("The .tributary.json at the recorded commit is not valid.");
+  else if (i.contribFile.state === "unavailable") reasons.push(i.contribFile.reason);
   else if (direct) {
     // one contributor: the file must list exactly this wallet and nobody else
-    const w = i.katki.wallets.map((x) => x.toLowerCase());
-    if (w.length !== 1 || w[0] !== (i.metaRecipient as string).toLowerCase()) problems.push("The .katki.json at the recorded commit does not list exactly the wallet named in the launch.");
+    const w = i.contribFile.wallets.map((x) => x.toLowerCase());
+    if (w.length !== 1 || w[0] !== (i.metaRecipient as string).toLowerCase()) problems.push("The .tributary.json at the recorded commit does not list exactly the wallet named in the launch.");
   } else if (vaulted && i.vault) {
-    const listed = new Set(i.katki.wallets.map((w) => w.toLowerCase()));
+    const listed = new Set(i.contribFile.wallets.map((w) => w.toLowerCase()));
     const stray = i.vault.recipients.filter((r) => !listed.has(r.recipient.toLowerCase()));
-    if (stray.length) problems.push(`${stray.length} vault recipient${stray.length > 1 ? "s are" : " is"} not listed in .katki.json at the recorded commit.`);
+    if (stray.length) problems.push(`${stray.length} vault recipient${stray.length > 1 ? "s are" : " is"} not listed in .tributary.json at the recorded commit.`);
   }
 
   for (const c of [i.provenance, i.handles]) {

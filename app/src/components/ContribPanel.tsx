@@ -5,14 +5,14 @@ import type { Address } from "viem";
 import { DFSClient } from "@ammora-protocol/sdk";
 import { Av, Banner, Spinner, StepList, type ProgressStep } from "./ui";
 import { useWallet } from "../hooks/useWallet";
-import type { KatkiInfo } from "../hooks/useLaunch";
+import type { ContribFileInfo } from "../hooks/useLaunch";
 import type { VaultSnapshot } from "../lib/launches";
 import { dfsOptions, explorerAddress, explorerTx, publicClient } from "../lib/chain";
 import { fmt } from "../lib/format";
 import { humanizeError } from "../lib/errors";
 import { sendCalldata } from "../lib/tx";
 import { TOTAL_BPS } from "../lib/split";
-import { missingFromFile } from "../lib/katki";
+import { missingFromFile } from "../lib/contribFile";
 
 type Row = {
   index: number;
@@ -25,7 +25,7 @@ type Row = {
   claimedBy: bigint;
 };
 
-export function buildRows(v: VaultSnapshot, info: KatkiInfo | undefined): Row[] {
+export function buildRows(v: VaultSnapshot, info: ContribFileInfo | undefined): Row[] {
   const handleOf = new Map<string, string>((info?.file?.contributors ?? []).map((c) => [c.wallet.toLowerCase(), c.github]));
   const commitsOf = new Map<string, number>((info?.history ?? []).map((h) => [h.login.toLowerCase(), h.contributions]));
   return v.recipients.map((r) => {
@@ -44,7 +44,7 @@ export function buildRows(v: VaultSnapshot, info: KatkiInfo | undefined): Row[] 
   });
 }
 
-export function ContribPanel({ vault, info, infoLoading, meta }: { vault: VaultSnapshot; info: KatkiInfo | undefined; infoLoading: boolean; meta: { repo: string; katkiCommit: string } }) {
+export function ContribPanel({ vault, info, infoLoading, meta }: { vault: VaultSnapshot; info: ContribFileInfo | undefined; infoLoading: boolean; meta: { repo: string; fileCommit: string } }) {
   const w = useWallet();
   const { data: wallet } = useWalletClient();
   const qc = useQueryClient();
@@ -120,7 +120,7 @@ export function ContribPanel({ vault, info, infoLoading, meta }: { vault: VaultS
       <div className="panel-hd">
         <h2 id="contrib-h">Contributors and fees</h2>
         <span className="faint" style={{ marginLeft: "auto", fontSize: 13 }}>
-          From <span className="mono">.katki.json</span> at <span className="mono">{meta.katkiCommit.slice(0, 7)}</span>
+          From <span className="mono">.tributary.json</span> at <span className="mono">{meta.fileCommit.slice(0, 7)}</span>
         </span>
       </div>
       <table className="ledger stack contrib">
@@ -194,13 +194,13 @@ export function ContribPanel({ vault, info, infoLoading, meta }: { vault: VaultS
           <div className="pick">
             {inFileNotInVault.length > 0 && (
               <span>
-                <b>In .katki.json but not in the vault</b> (the vault takes the 5 contributors with the most commits):{" "}
+                <b>In .tributary.json but not in the vault</b> (the vault takes the 5 contributors with the most commits):{" "}
                 {inFileNotInVault.map((c) => c.github).join(", ")}.
               </span>
             )}
             {notInFile.length > 0 && (
               <span>
-                <b>Repository contributors not in .katki.json:</b> {notInFile.slice(0, 12).map((c) => c.login).join(", ")}
+                <b>Repository contributors not in .tributary.json:</b> {notInFile.slice(0, 12).map((c) => c.login).join(", ")}
                 {notInFile.length > 12 ? ` and ${notInFile.length - 12} more` : ""}.
               </span>
             )}

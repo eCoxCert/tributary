@@ -12,7 +12,7 @@ import { plural } from "../lib/visibility";
 import { allocationNote } from "../lib/copy";
 import { selectVaultRecipients } from "../lib/split";
 import { EXAMPLE_CONTRIBUTORS } from "../lib/examples";
-import { KatkiCode } from "../components/KatkiCode";
+import { ContribFileCode } from "../components/ContribFileCode";
 
 /** Illustration only: shown when no real launch exists yet. Commit counts are invented and labelled as such. */
 const EXAMPLE = selectVaultRecipients(EXAMPLE_CONTRIBUTORS.map((c) => ({ github: c.github, wallet: c.wallet, commits: c.commits })));
@@ -59,7 +59,7 @@ export function Landing() {
           <div>
             <h1 className="h1">Token launches that pay a repo's contributors</h1>
             <p className="lead">
-              Add a <span className="mono">.katki.json</span> to your repository and launch its token on a bonding curve. Every trade pays a fee. After the protocol's share, the rest goes to a vault that pays the 5 contributors with the most commits, split by commit share.
+              Add a <span className="mono">.tributary.json</span> to your repository and launch its token on a bonding curve. Every trade pays a fee. After the protocol's share, the rest goes to a vault that pays the 5 contributors with the most commits, split by commit share.
             </p>
             <div className="hero-cta">
               <Link className="btn btn-primary btn-lg" to="/create">Launch your repo</Link>
@@ -80,8 +80,8 @@ export function Landing() {
             </div>
             <div className="router-body">
               <div className="router-file">
-                <div className="router-file-hd"><span className="mono">.katki.json</span><span>{feature?.rec.meta ? `main · ${feature.rec.meta.katkiCommit.slice(0, 7)}` : "version 1"}</span></div>
-                <KatkiCode label=".katki.json excerpt" wrap more rows={EXAMPLE_CONTRIBUTORS.slice(0, 2).map((c) => ({ github: c.github, wallet: `${c.wallet.slice(0, 6)}…${c.wallet.slice(-4)}` }))} />
+                <div className="router-file-hd"><span className="mono">.tributary.json</span><span>{feature?.rec.meta ? `main · ${feature.rec.meta.fileCommit.slice(0, 7)}` : "version 1"}</span></div>
+                <ContribFileCode label=".tributary.json excerpt" wrap more rows={EXAMPLE_CONTRIBUTORS.slice(0, 2).map((c) => ({ github: c.github, wallet: `${c.wallet.slice(0, 6)}…${c.wallet.slice(-4)}` }))} />
               </div>
               <FeeRouter rows={routerRows} paused={paused} />
             </div>
@@ -128,7 +128,7 @@ export function Landing() {
               <li className="phase">
                 <span className="phase-n">1</span>
                 <div>
-                  <h3>Commit .katki.json</h3>
+                  <h3>Commit .tributary.json</h3>
                   <p>List contributor GitHub handles and wallets in one file at the repo root. Tributary reads it from the default branch at launch and counts each person's commits, so the split is public before anyone buys.</p>
                 </div>
               </li>
@@ -192,7 +192,7 @@ export function Landing() {
           <div>
             <h2 className="h2">Where the trading fee goes</h2>
             <p className="prose" style={{ marginTop: 16 }}>
-              {feeBps !== undefined ? `${fmt.pct(feeBps / 100, feeBps % 100 ? 2 : 0)} of every buy and sell is the trading fee. ${fmt.pct(protocolPct, 0)} of it goes to the protocol; the rest goes to a fee vault that splits it across the wallets in .katki.json by commit share.` : "Every buy and sell pays a trading fee. Part of it goes to the protocol; the rest goes to a fee vault that splits it across the wallets in .katki.json by commit share."} Each contributor claims their part when they want it. After graduation, trading fees go to liquidity positions held by the launch owner, who adds them to the vault; that step is not automatic.
+              {feeBps !== undefined ? `${fmt.pct(feeBps / 100, feeBps % 100 ? 2 : 0)} of every buy and sell is the trading fee. ${fmt.pct(protocolPct, 0)} of it goes to the protocol; the rest goes to a fee vault that splits it across the wallets in .tributary.json by commit share.` : "Every buy and sell pays a trading fee. Part of it goes to the protocol; the rest goes to a fee vault that splits it across the wallets in .tributary.json by commit share."} Each contributor claims their part when they want it. After graduation, trading fees go to liquidity positions held by the launch owner, who adds them to the vault; that step is not automatic.
             </p>
             <ul className="rules">
               <li><IconCheck /><span><b>Split by commit share.</b> Shares come from GitHub commit counts, read when the launch is made. A vault holds the 1 to 5 contributors with the most commits (with one contributor, the fee goes straight to that wallet), and the site lists who is in and who is not.</span></li>
@@ -252,14 +252,14 @@ export function Landing() {
         <div className="wrap close-grid">
           <div>
             <h2 className="h2">Your repo already has contributors. Launch it with them.</h2>
-            <p className="prose" style={{ marginTop: 16 }}>Launching takes four steps and a few transactions. If the repo has no .katki.json yet, the launch form shows you how to write one.</p>
+            <p className="prose" style={{ marginTop: 16 }}>Launching takes four steps and a few transactions. If the repo has no .tributary.json yet, the launch form shows you how to write one.</p>
             <div className="hero-cta"><Link className="btn btn-primary btn-lg" to="/create">Launch your repo</Link></div>
           </div>
           <div className="panel">
             <div className="panel-hd"><h3>Before you launch</h3></div>
             <ul className="rules" style={{ margin: 0, padding: 16 }}>
               <li><IconCheck /><span>A public GitHub repository with at least 1 listed contributor who has commits</span></li>
-              <li><IconCheck /><span><span className="mono">.katki.json</span> on the default branch, with each person's GitHub handle and wallet</span></li>
+              <li><IconCheck /><span><span className="mono">.tributary.json</span> on the default branch, with each person's GitHub handle and wallet</span></li>
               <li><IconCheck /><span>A wallet on GIWA Sepolia with test ETH for gas</span></li>
             </ul>
           </div>

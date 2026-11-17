@@ -1,6 +1,6 @@
 # Tributary design system
 
-Tributary is the product name for the Contributor Launchpad: token launches for open-source repositories on the Ammora protocol (GIWA Sepolia testnet). Fees from every trade go to the wallets in the repo's `.katki.json`, split by commit share.
+Tributary is the product name for the Contributor Launchpad: token launches for open-source repositories on the Ammora protocol (GIWA Sepolia testnet). Fees from every trade go to the wallets in the repo's `.tributary.json`, split by commit share.
 
 **Name.** A tributary is a stream that joins a river. It carries the "contribute" root, and it describes what the product does: many small contributions merge into one project, and one fee stream branches back out to the people who wrote the code. Trademark search (USPTO, EUIPO, WIPO) was not run: *doğrulanamadı*. Run it before public use.
 
@@ -138,7 +138,7 @@ Copied from `prototype/assets/tokens.css`. If they ever differ, the CSS file is 
 
 ### Type rules
 
-- Two families. **Hanken Grotesk** (variable 400 to 800) for everything readable. **IBM Plex Mono** only for things a developer would type or paste: file names (`.katki.json`), addresses, commit hashes, JSON. Never for labels or numbers.
+- Two families. **Hanken Grotesk** (variable 400 to 800) for everything readable. **IBM Plex Mono** only for things a developer would type or paste: file names (`.tributary.json`), addresses, commit hashes, JSON. Never for labels or numbers.
 - Schibsted Grotesk was the first choice and was dropped: its tabular figures also widen the full stop, which made every price look monospaced. Hanken keeps a narrow point with `tabular-nums`.
 - Every changing number (prices, ETH, %, counts, the countdown) uses `font-variant-numeric: tabular-nums` via `.num` or the table rules.
 - Scale: `--fs-cap` 12 is the floor. Body 16. Headings use negative tracking (`--track-head`, `--track-h1`) and `text-wrap: balance`; paragraphs `text-wrap: pretty` and a 62ch measure.
@@ -161,7 +161,7 @@ Copied from `prototype/assets/tokens.css`. If they ever differ, the CSS file is 
 - **Meter** shows curve progress (6px). On the curve chart the contributor-window part is a 45 degree hatch, the same hatch is in the legend.
 - **Identicons**: GitHub-style 5x5 mirrored pixel avatars, generated from the handle, in accent (people) or ink (repos). No stock photos and no fake faces.
 - **Banners** for states that need attention: warn (wrong network), error (RPC failed), accent (success). Each says what happened, what it means for the user's funds if relevant, and has one action.
-- **Code block** for `.katki.json`: mono 12 to 13px, keys in ink, strings in accent, comments in ink-3.
+- **Code block** for `.tributary.json`: mono 12 to 13px, keys in ink, strings in accent, comments in ink-3.
 - **Curve chart** (`drawCurve` in app.js): drawn in SVG at the real pixel width, redrawn on resize and theme change. Ink line for the sold part, dashed line for the rest, filled wash under the sold part, hatch for window buys, dotted vertical at graduation, crosshair tooltip with tokens sold, price and ETH raised.
 
 ### States (every screen)
@@ -174,7 +174,7 @@ Copied from `prototype/assets/tokens.css`. If they ever differ, the CSS file is 
 | Wallet not connected | `?wallet=disconnected` | Header shows "Connect wallet"; trade and launch actions become "Connect wallet". |
 | Wrong network | `?wallet=wrong` | Header pill turns amber, page banner, actions become "Switch to GIWA Sepolia". |
 | Not a contributor | `launch.html?wallet=outsider` | Buy button disabled with a live countdown and the reason. |
-| `.katki.json` missing | `create.html?state=missing` | Three-step guide with a pre-filled template. |
+| `.tributary.json` missing | `create.html?state=missing` | Three-step guide with a pre-filled template. |
 
 Theme: `?theme=dark` or `?theme=light`, or the toggle in the header (saved in localStorage). Default follows the OS.
 
@@ -202,7 +202,7 @@ These values are invented for the prototype and marked `data-assumed` in the HTM
 - Contributor window 24 hours.
 - Graduation at 4.20 ETH raised; supply 1,000,000,000 with 800,000,000 on the curve; exponential curve with an 8x end price.
 - Founder allocation 5%, locked 180 days, released all at once.
-- `.katki.json` schema (`version`, `contributors[].github`, `.wallet`, `.weight` summing to 1). The real format was not available: *doğrulanamadı*.
+- `.tributary.json` schema (`version`, `contributors[].github`, `.wallet`, `.weight` summing to 1). The real format was not available: *doğrulanamadı*.
 - All repos, handles, wallets, prices and fee amounts are fictional sample data.
 
 ## Do not
@@ -218,7 +218,7 @@ These values are invented for the prototype and marked `data-assumed` in the HTM
 
 ## Anti-slop gate (god-anti-slop, run before delivery)
 
-1. [x] **Could this belong to a different company if the logo were swapped?** No. The hero is a `.katki.json` file feeding a fee-split diagram, the how-it-works section is the bonding curve itself, the lists are on-chain ledgers. None of it transfers to another product.
+1. [x] **Could this belong to a different company if the logo were swapped?** No. The hero is a `.tributary.json` file feeding a fee-split diagram, the how-it-works section is the bonding curve itself, the lists are on-chain ledgers. None of it transfers to another product.
 2. [x] **Direction nameable in one sentence and visible everywhere?** "A ledger for open source." Ledger tables, hairline rules, tabular numbers and git vocabulary appear on all four screens.
 3. [x] **Fonts deliberate and at most two?** Hanken Grotesk and IBM Plex Mono, mono limited to code-like strings. The first pick was replaced after a measured problem (see Type rules).
 4. [x] **Exactly one accent, from the subject?** Estuary teal, from the river metaphor in the name. Green, red and amber are semantic only.

@@ -7,7 +7,7 @@ import { ContribPanel } from "../components/ContribPanel";
 import { AllocationPanel } from "../components/AllocationPanel";
 import { statusFromCode } from "../components/LaunchRows";
 import { DirectPanel } from "../components/DirectPanel";
-import { NotFoundError, useDirect, useAllocation, useBlockTime, useKatkiInfo, useLaunch, useLaunchRecord, useVault } from "../hooks/useLaunch";
+import { NotFoundError, useDirect, useAllocation, useBlockTime, useContribFileInfo, useLaunch, useLaunchRecord, useVault } from "../hooks/useLaunch";
 import { ADDR, explorerAddress } from "../lib/chain";
 import { curveTotals, humanPrice, positionAt, rawPrice, sampleCurve } from "../lib/curveMath";
 import { fmt } from "../lib/format";
@@ -30,7 +30,7 @@ export function Launch() {
   const vault = useVault(meta?.vault);
   const direct = useDirect(meta?.recipient && !meta.vault ? meta.recipient : undefined);
   const isDirect = !!meta?.recipient && !meta.vault;
-  const info = useKatkiInfo(meta);
+  const info = useContribFileInfo(meta);
   // null while anything is still loading: the page must never look verified before every check has finished
   const verification: Verification | null = useMemo(() => {
     if (!meta || !data) return null;
@@ -42,7 +42,7 @@ export function Launch() {
       creator: data.snap.state.creator,
       quoteToken: ADDR.weth,
       vault: meta.vault ? vault.data ?? null : null,
-      katki: info.data ? info.data.katki : { state: "unavailable", reason: "network" },
+      contribFile: info.data ? info.data.contribFile : { state: "unavailable", reason: "network" },
       provenance: info.data ? info.data.provenance : { state: "unavailable", reason: "network" },
       handles: info.data ? info.data.handles : { state: "unavailable", reason: "network" },
     });

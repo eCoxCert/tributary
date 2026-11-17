@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { isAncestorOfDefault, type Deps } from "./github";
-import { readKatkiState } from "./katkiCheck";
+import { readContribFileState } from "./contribFileCheck";
 
 const A = (c: string) => "0x" + c.repeat(40);
 const ref = { owner: "o", name: "r" };
@@ -43,21 +43,21 @@ describe("isAncestorOfDefault", () => {
   });
 });
 
-describe("readKatkiState repository checks", () => {
+describe("readContribFileState repository checks", () => {
   it("passes when the commit is on the default branch and handles are contributors", async () => {
-    const r = await readKatkiState("o/r", SHA, deps({}));
+    const r = await readContribFileState("o/r", SHA, deps({}));
     expect(r.provenance.state).toBe("ok");
     expect(r.handles.state).toBe("ok");
   });
   it("a fork's commit (diverged) is a provenance mismatch", async () => {
-    expect((await readKatkiState("o/r", SHA, deps({ compare: () => json(200, { status: "diverged" }) }))).provenance.state).toBe("mismatch");
+    expect((await readContribFileState("o/r", SHA, deps({ compare: () => json(200, { status: "diverged" }) }))).provenance.state).toBe("mismatch");
   });
   it("a listed handle that is not a contributor is a handles mismatch", async () => {
-    const r = await readKatkiState("o/r", SHA, deps({ contributors: () => json(200, [{ login: "alice", contributions: 9 }]) }));
+    const r = await readContribFileState("o/r", SHA, deps({ contributors: () => json(200, [{ login: "alice", contributions: 9 }]) }));
     expect(r.handles.state).toBe("mismatch");
   });
   it("rate limit on the compare call is unavailable, never ok", async () => {
-    const r = await readKatkiState("o/r", SHA, deps({ compare: () => json(403, {}, { "x-ratelimit-remaining": "0" }) }));
+    const r = await readContribFileState("o/r", SHA, deps({ compare: () => json(403, {}, { "x-ratelimit-remaining": "0" }) }));
     expect(r.provenance.state).toBe("unavailable");
   });
 });

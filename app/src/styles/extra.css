@@ -75,12 +75,12 @@
   .kv.fmt > div { display: grid; gap: 2px; }
   .kv.fmt dd { text-align: left; }
 }
-/* /katki: reference on the left, sticky summary on the right */
-.katki-grid { display: grid; gap: var(--s-5); align-items: start; }
-.katki-grid > * { min-width: 0; }
+/* /contribFile: reference on the left, sticky summary on the right */
+.format-grid { display: grid; gap: var(--s-5); align-items: start; }
+.format-grid > * { min-width: 0; }
 @media (min-width: 1000px) {
-  .katki-grid { grid-template-columns: minmax(0, 1fr) 320px; gap: var(--s-7); }
-  .katki-side { position: sticky; top: calc(var(--header-h) + var(--s-5)); }
+  .format-grid { grid-template-columns: minmax(0, 1fr) 320px; gap: var(--s-7); }
+  .format-side { position: sticky; top: calc(var(--header-h) + var(--s-5)); }
 }
 
 @media (max-width: 520px) { .code { white-space: pre-wrap; overflow-wrap: anywhere; } }

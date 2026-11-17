@@ -28,6 +28,15 @@ const lists: { name: string; hash: string; ready: string }[] = [
   { name: "list-home-loading", hash: "#/?fixture=list-loading", ready: "#live .sk" },
 ];
 if (process.env.ONLY_MISSING) { states.length = 0; lists.length = 0; } // quick re-shot of the create guide only
+// Headless Chrome occasionally kills a page ("Page crashed") under memory pressure on long full-page runs; retry that capture on a fresh page.
+async function attempt(fn: () => Promise<void>): Promise<void> {
+  for (let i = 0; ; i++) {
+    try { return await fn(); } catch (e) {
+      if (!/crash|closed/i.test(String(e)) || i >= 2) throw e;
+      console.log("   retry after: " + String(e).split("\n")[0]);
+    }
+  }
+}
 const report: unknown[] = [];
 const browser = await chromium.launch({ channel: "chrome", headless: true });
 for (const [width, height] of (process.env.ONLY_MISSING ? [] : [[1440, 900], [1280, 800], [1024, 768], [768, 1024], [375, 812]]) as readonly (readonly [number, number])[]) {
@@ -36,6 +45,7 @@ for (const [width, height] of (process.env.ONLY_MISSING ? [] : [[1440, 900], [12
     await ctx.addInitScript((t) => localStorage.setItem("trib-theme", t), theme);
     for (const s of states) {
       if (theme === "dark" && !["ok", "direct", "mismatch", "unverifiable"].includes(s.name)) continue;
+await attempt(async () => {
       const page = await ctx.newPage();
       const errors: string[] = [];
       page.on("console", (m) => { if (m.type() === "error") errors.push(m.text().slice(0, 200)); });
@@ -50,6 +60,7 @@ for (const [width, height] of (process.env.ONLY_MISSING ? [] : [[1440, 900], [12
       errors.forEach((e) => console.log("   ! " + e));
       report.push({ file, overflow: m.sw > m.cw, errors });
       await page.close();
+});
     }
     await ctx.close();
   }
@@ -58,6 +69,7 @@ for (const [width, height] of [[1440, 900], [1280, 800], [1024, 768], [768, 1024
   const ctx = await browser.newContext({ viewport: { width, height }, colorScheme: "light" });
   await ctx.addInitScript(() => localStorage.setItem("trib-theme", "light"));
   for (const l of lists) {
+await attempt(async () => {
     const page = await ctx.newPage();
     const errors: string[] = [];
     page.on("console", (m) => { if (m.type() === "error") errors.push(m.text().slice(0, 200)); });
@@ -72,6 +84,7 @@ for (const [width, height] of [[1440, 900], [1280, 800], [1024, 768], [768, 1024
     errors.forEach((e) => console.log("   ! " + e));
     report.push({ file, overflow: m.sw > m.cw, errors });
     await page.close();
+});
   }
   await ctx.close();
 }
@@ -79,21 +92,23 @@ for (const [width, height] of [[1440, 900], [375, 812]] as const) {
   for (const [label, q] of [["", ""], ["-wallet", "?fw=contrib"]] as const) {
     const ctx = await browser.newContext({ viewport: { width, height }, colorScheme: "light" });
     await ctx.addInitScript(() => localStorage.setItem("trib-theme", "light"));
+await attempt(async () => {
     const page = await ctx.newPage();
     const errors: string[] = [];
-    page.on("console", (m) => { if (m.type() === "error") errors.push(m.text().slice(0, 200)); });
+    page.on("console", (m) => { if (m.type() === "error" && !/status of 404/.test(m.text())) /* the missing file is the state under test: the browser logs its 404 */ errors.push(m.text().slice(0, 200)); });
     page.on("pageerror", (e) => errors.push("pageerror: " + e.message));
     await page.goto(`${BASE}#/create${q}`);
     await page.fill("#repo", "octocat/Hello-World");
     await page.click("text=Read repository");
-    try { await page.waitForSelector("#katki .btn-primary", { timeout: 45_000 }); } catch { errors.push("not ready: missing guide (GitHub unreachable or rate limited?)"); }
+    try { await page.waitForSelector("#format .btn-primary", { timeout: 45_000 }); } catch { errors.push("not ready: missing guide (GitHub unreachable or rate limited?)"); }
     await page.waitForTimeout(800);
-    const m = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth, href: (document.querySelector("#katki a.btn-primary") as HTMLAnchorElement | null)?.href ?? "", rel: (document.querySelector("#katki a.btn-primary") as HTMLAnchorElement | null)?.rel ?? "" }));
+    const m = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth, href: (document.querySelector("#format a.btn-primary") as HTMLAnchorElement | null)?.href ?? "", rel: (document.querySelector("#format a.btn-primary") as HTMLAnchorElement | null)?.rel ?? "" }));
     const file = `fixture-create-missing${label}-light-${width}.png`;
     await page.screenshot({ path: resolve(OUT, file), fullPage: true });
     console.log(file.padEnd(46), m.sw > m.cw ? "OVERFLOW" : "no overflow", `errors=${errors.length}`, m.rel, m.href.slice(0, 80));
     errors.forEach((e) => console.log("   ! " + e));
     report.push({ file, overflow: m.sw > m.cw, errors });
+});
     await ctx.close();
   }
 }

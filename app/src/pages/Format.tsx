@@ -1,16 +1,16 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Banner } from "../components/ui";
-import { KatkiCode } from "../components/KatkiCode";
+import { ContribFileCode } from "../components/ContribFileCode";
 import { useTitle } from "../hooks/useTitle";
-import { parseKatki, WALLET_PLACEHOLDER, type ParseResult } from "../lib/katki";
+import { parseContribFile, WALLET_PLACEHOLDER, type ParseResult } from "../lib/contribFile";
 import { MAX_RECIPIENTS } from "../lib/split";
 import { EXAMPLE_CONTRIBUTORS } from "../lib/examples";
 
 const SAMPLE = JSON.stringify({ version: 1, contributors: EXAMPLE_CONTRIBUTORS.slice(0, 2).map((c) => ({ github: c.github, wallet: WALLET_PLACEHOLDER })) }, null, 2);
 
-export function Katki() {
-  useTitle(".katki.json format");
+export function Format() {
+  useTitle(".tributary.json format");
   const [text, setText] = useState("");
   const [res, setRes] = useState<ParseResult | null>(null);
   return (
@@ -18,18 +18,18 @@ export function Katki() {
       <div className="wrap">
         <div className="page-hd">
           <div>
-            <h1>.katki.json format</h1>
+            <h1>.tributary.json format</h1>
             <p>One file at the root of your default branch says who gets paid. Version 1.</p>
           </div>
           <Link className="btn btn-primary" to="/create">Launch your repo</Link>
         </div>
 
-        <div className="katki-grid">
+        <div className="format-grid">
           <div style={{ display: "grid", gap: 24 }}>
             <section className="panel" aria-labelledby="schema-h">
               <div className="panel-hd"><h2 id="schema-h">The file</h2></div>
               <div className="panel-bd" style={{ display: "grid", gap: 16 }}>
-                <KatkiCode label="Example .katki.json" wrap rows={EXAMPLE_CONTRIBUTORS.slice(0, 2).map((c) => ({ github: c.github, wallet: WALLET_PLACEHOLDER }))} />
+                <ContribFileCode label="Example .tributary.json" wrap rows={EXAMPLE_CONTRIBUTORS.slice(0, 2).map((c) => ({ github: c.github, wallet: WALLET_PLACEHOLDER }))} />
                 <dl className="kv fmt">
                   <div><dt><span className="mono">version</span></dt><dd>The number 1</dd></div>
                   <div><dt><span className="mono">contributors[].github</span></dt><dd>A GitHub username. Listed once per person.</dd></div>
@@ -61,12 +61,12 @@ export function Katki() {
               <div className="panel-hd"><h2 id="check-h">Check a file</h2></div>
               <div className="panel-bd" style={{ display: "grid", gap: 12 }}>
                 <div className="field">
-                  <label htmlFor="kt">Paste a .katki.json</label>
+                  <label htmlFor="kt">Paste a .tributary.json</label>
                   <textarea className="input" id="kt" value={text} spellCheck={false} onChange={(e) => { setText(e.target.value); setRes(null); }} placeholder='{ "version": 1, "contributors": [ ... ] }' />
                   <span className="hint">This checks the shape, handles and addresses in your browser. Whether each person is a repository contributor is checked when you read the repository on the launch form.</span>
                 </div>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <button className="btn" type="button" disabled={!text.trim()} onClick={() => setRes(parseKatki(text))}>Check file</button>
+                  <button className="btn" type="button" disabled={!text.trim()} onClick={() => setRes(parseContribFile(text))}>Check file</button>
                   <button className="btn btn-quiet" type="button" onClick={() => { setText(SAMPLE); setRes(null); }}>Fill in the example</button>
                 </div>
                 {res?.ok && <Banner kind="acc">Valid. {res.file.contributors.length} contributor{res.file.contributors.length > 1 ? "s" : ""}.{res.warnings.length ? ` ${res.warnings.map((w) => w.message).join(" ")}` : ""}</Banner>}
@@ -80,10 +80,10 @@ export function Katki() {
             </section>
           </div>
 
-          <aside className="katki-side panel" aria-label="Summary">
+          <aside className="format-side panel" aria-label="Summary">
             <div className="panel-hd"><h2>At a glance</h2></div>
             <dl className="kv fmt" style={{ padding: "4px 16px 12px" }}>
-              <div><dt>File</dt><dd><span className="mono">.katki.json</span></dd></div>
+              <div><dt>File</dt><dd><span className="mono">.tributary.json</span></dd></div>
               <div><dt>Location</dt><dd>Repository root, default branch</dd></div>
               <div><dt>Fields</dt><dd>version, github, wallet</dd></div>
               <div><dt>Fee recipients</dt><dd>1 to {MAX_RECIPIENTS}, top by commits</dd></div>

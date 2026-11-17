@@ -1,6 +1,6 @@
 import type { VaultSnapshot } from "./launches";
 import type { TributaryMeta } from "./metadata";
-import { verifyTributaryLaunch, type KatkiState, type RepoCheck, type Verification } from "./verify";
+import { verifyTributaryLaunch, type ContribFileState, type RepoCheck, type Verification } from "./verify";
 
 /** Maps what the cards and the launch page read into the pure verifier. Used by both, so they cannot disagree. */
 export function verifyLaunch(p: {
@@ -10,7 +10,7 @@ export function verifyLaunch(p: {
   creator: string;
   quoteToken: string;
   vault: VaultSnapshot | null;
-  katki: KatkiState;
+  contribFile: ContribFileState;
   provenance: RepoCheck;
   handles: RepoCheck;
 }): Verification {
@@ -30,7 +30,7 @@ export function verifyLaunch(p: {
           recipients: p.vault.recipients.map((r) => ({ recipient: r.recipient, share: r.share })),
         }
       : null,
-    katki: p.katki,
+    contribFile: p.contribFile,
     provenance: p.provenance,
     handles: p.handles,
   });

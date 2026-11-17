@@ -21,7 +21,7 @@ for (const [label, commits] of [["6 contributors", [120, 60, 15, 5, 3, 2]], ["1 
   const plan = await buildCreatePlan({
     owner,
     repo: "tidewater/quill-rpc",
-    katkiCommit: "3f9a2c1d4e5b6a7988776655443322110ffeeddc",
+    fileCommit: "3f9a2c1d4e5b6a7988776655443322110ffeeddc",
     recipients: sel.included.map((i) => ({ wallet: i.wallet as Address, bps: i.bps })),
     name: "Quill",
     symbol: "QRPC",

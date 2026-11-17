@@ -1,5 +1,5 @@
 /**
- * `.katki.json` parsing and validation. Pure functions.
+ * `.tributary.json` parsing and validation. Pure functions.
  *
  * Schema (version 1): { "version": 1, "contributors": [ { "github": "user", "wallet": "0x..." } ] }
  * There is no weight in the file: the site derives it from the GitHub commit counts.
@@ -7,11 +7,11 @@
 import { getAddress, isAddress } from "viem";
 import type { Weighted } from "./split";
 
-export type KatkiEntry = { github: string; wallet: `0x${string}` };
-export type KatkiFile = { version: 1; contributors: KatkiEntry[] };
+export type ContribFileEntry = { github: string; wallet: `0x${string}` };
+export type ContribFileData = { version: 1; contributors: ContribFileEntry[] };
 export type RepoContributor = { login: string; contributions: number };
 
-export type KatkiIssue = { code: string; message: string; github?: string };
+export type ContribFileIssue = { code: string; message: string; github?: string };
 
 const GITHUB_LOGIN = /^[A-Za-z0-9](?:[A-Za-z0-9]|-(?=[A-Za-z0-9])){0,38}$/;
 export const MAX_FILE_BYTES = 64 * 1024;
@@ -19,21 +19,21 @@ export const MAX_FILE_BYTES = 64 * 1024;
 export const WALLET_PLACEHOLDER = "0xYOUR_WALLET_ADDRESS";
 export const isPlaceholderWallet = (w: string) => /^0x(\.\.\.|YOUR)|YOUR_WALLET|ADDRESS$/i.test(w.trim());
 
-export type ParseResult = { ok: true; file: KatkiFile; warnings: KatkiIssue[] } | { ok: false; errors: KatkiIssue[] };
+export type ParseResult = { ok: true; file: ContribFileData; warnings: ContribFileIssue[] } | { ok: false; errors: ContribFileIssue[] };
 
-/** Parses the text of a `.katki.json`. Checks shape, handles and addresses. It does not look at GitHub. */
-export function parseKatki(text: string): ParseResult {
-  const errors: KatkiIssue[] = [];
-  const warnings: KatkiIssue[] = [];
-  if (text.length > MAX_FILE_BYTES) return { ok: false, errors: [{ code: "too-large", message: ".katki.json is larger than 64 KB." }] };
+/** Parses the text of a `.tributary.json`. Checks shape, handles and addresses. It does not look at GitHub. */
+export function parseContribFile(text: string): ParseResult {
+  const errors: ContribFileIssue[] = [];
+  const warnings: ContribFileIssue[] = [];
+  if (text.length > MAX_FILE_BYTES) return { ok: false, errors: [{ code: "too-large", message: ".tributary.json is larger than 64 KB." }] };
   let raw: unknown;
   try {
     raw = JSON.parse(text);
   } catch (e) {
-    return { ok: false, errors: [{ code: "bad-json", message: `.katki.json is not valid JSON: ${(e as Error).message}` }] };
+    return { ok: false, errors: [{ code: "bad-json", message: `.tributary.json is not valid JSON: ${(e as Error).message}` }] };
   }
   if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
-    return { ok: false, errors: [{ code: "bad-shape", message: ".katki.json must be a JSON object." }] };
+    return { ok: false, errors: [{ code: "bad-shape", message: ".tributary.json must be a JSON object." }] };
   }
   const obj = raw as Record<string, unknown>;
   if (obj.version !== 1) errors.push({ code: "bad-version", message: `"version" must be 1, found ${JSON.stringify(obj.version)}.` });
@@ -43,7 +43,7 @@ export function parseKatki(text: string): ParseResult {
   }
   const seenLogin = new Map<string, number>();
   const seenWallet = new Map<string, string>();
-  const entries: KatkiEntry[] = [];
+  const entries: ContribFileEntry[] = [];
   obj.contributors.forEach((item, i) => {
     const at = `contributors[${i}]`;
     if (typeof item !== "object" || item === null || Array.isArray(item)) {
@@ -91,12 +91,12 @@ export function parseKatki(text: string): ParseResult {
 
 export type CheckResult =
   | { ok: true; eligible: Weighted[] }
-  | { ok: false; errors: KatkiIssue[] };
+  | { ok: false; errors: ContribFileIssue[] };
 
 /** Joins the file with the repo's GitHub contributors. A listed user who is not a repo contributor is an error. */
-export function checkAgainstHistory(file: KatkiFile, history: readonly RepoContributor[]): CheckResult {
+export function checkAgainstHistory(file: ContribFileData, history: readonly RepoContributor[]): CheckResult {
   const byLogin = new Map(history.map((h) => [h.login.toLowerCase(), h.contributions]));
-  const errors: KatkiIssue[] = [];
+  const errors: ContribFileIssue[] = [];
   const eligible: Weighted[] = [];
   for (const c of file.contributors) {
     const commits = byLogin.get(c.github.toLowerCase());
@@ -111,7 +111,7 @@ export function checkAgainstHistory(file: KatkiFile, history: readonly RepoContr
 }
 
 /** Repo contributors who are not in the file (shown as "not included"). */
-export function missingFromFile(file: KatkiFile, history: readonly RepoContributor[]): RepoContributor[] {
+export function missingFromFile(file: ContribFileData, history: readonly RepoContributor[]): RepoContributor[] {
   const listed = new Set(file.contributors.map((c) => c.github.toLowerCase()));
   return history.filter((h) => !listed.has(h.login.toLowerCase()));
 }
@@ -124,5 +124,5 @@ export function templateFor(history: readonly RepoContributor[], limit = 4, mine
 
 /** GitHub's "create new file" page with the name and content already filled in (opens in a new tab). */
 export function githubNewFileUrl(ref: { owner: string; name: string }, branch: string, json: string): string {
-  return `https://github.com/${ref.owner}/${ref.name}/new/${encodeURIComponent(branch)}?filename=.katki.json&value=${encodeURIComponent(json)}`;
+  return `https://github.com/${ref.owner}/${ref.name}/new/${encodeURIComponent(branch)}?filename=.tributary.json&value=${encodeURIComponent(json)}`;
 }

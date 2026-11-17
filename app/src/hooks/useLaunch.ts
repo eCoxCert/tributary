@@ -6,9 +6,9 @@ import { ADDR, publicClient } from "../lib/chain";
 import { findLaunch, readCurveSnapshot, readDirectSnapshot, readVaultSnapshot, type CurveSnapshot, type LaunchRecord } from "../lib/launches";
 import { decodeTributaryMetadata, type TributaryMeta } from "../lib/metadata";
 import { getContributors, getRepoInfo, parseRepoInput, type RepoInfo } from "../lib/github";
-import type { KatkiFile, RepoContributor } from "../lib/katki";
-import { readKatkiState } from "../lib/katkiCheck";
-import type { KatkiState, RepoCheck } from "../lib/verify";
+import type { ContribFileData, RepoContributor } from "../lib/contribFile";
+import { readContribFileState } from "../lib/contribFileCheck";
+import type { ContribFileState, RepoCheck } from "../lib/verify";
 import { readAllocation, type AllocationRead } from "../lib/allocation";
 
 const ZERO = "0x0000000000000000000000000000000000000000";
@@ -94,36 +94,36 @@ export function useVault(vault: Address | undefined) {
   });
 }
 
-export type KatkiInfo = {
-  file: KatkiFile | null;
+export type ContribFileInfo = {
+  file: ContribFileData | null;
   history: RepoContributor[] | null;
   repo: RepoInfo | null;
   notes: string[];
-  /** What .katki.json looked like at the recorded commit (404 / invalid / unreachable / ok). */
-  katki: KatkiState;
+  /** What .tributary.json looked like at the recorded commit (404 / invalid / unreachable / ok). */
+  contribFile: ContribFileState;
   provenance: RepoCheck;
   handles: RepoCheck;
 };
 
 /** Handles and commit counts for a launch's recipients. Best effort: GitHub may be rate limited. */
-export function useKatkiInfo(meta: TributaryMeta | null) {
-  return useQuery<KatkiInfo>({
-    queryKey: ["katki-info", meta?.repo, meta?.katkiCommit],
+export function useContribFileInfo(meta: TributaryMeta | null) {
+  return useQuery<ContribFileInfo>({
+    queryKey: ["contribFile-info", meta?.repo, meta?.fileCommit],
     enabled: !!meta,
     staleTime: 10 * 60_000,
     retry: 0,
     queryFn: async () => {
       if (import.meta.env.DEV && fx()) return (await import("../fixtures/tributary")).fixtureInfoAsync(fx() as string);
       const ref = parseRepoInput((meta as TributaryMeta).repo);
-      if (!ref) return { file: null, history: null, repo: null, notes: ["The repository name in the launch metadata is not valid."], katki: { state: "invalid" } as KatkiState, provenance: { state: "ok" } as RepoCheck, handles: { state: "ok" } as RepoCheck };
+      if (!ref) return { file: null, history: null, repo: null, notes: ["The repository name in the launch metadata is not valid."], contribFile: { state: "invalid" } as ContribFileState, provenance: { state: "ok" } as RepoCheck, handles: { state: "ok" } as RepoCheck };
       const notes: string[] = [];
-      let file: KatkiFile | null = null;
+      let file: ContribFileData | null = null;
       let history: RepoContributor[] | null = null;
       let repo: RepoInfo | null = null;
-      const kr = await readKatkiState((meta as TributaryMeta).repo, (meta as TributaryMeta).katkiCommit);
+      const kr = await readContribFileState((meta as TributaryMeta).repo, (meta as TributaryMeta).fileCommit);
       file = kr.file;
-      if (kr.state.state === "unavailable") notes.push(`.katki.json could not be read from GitHub (${kr.state.reason}).`);
-      else if (!file) notes.push(".katki.json is missing or invalid at the recorded commit.");
+      if (kr.state.state === "unavailable") notes.push(`.tributary.json could not be read from GitHub (${kr.state.reason}).`);
+      else if (!file) notes.push(".tributary.json is missing or invalid at the recorded commit.");
       try {
         history = await getContributors(ref);
       } catch (e) {
@@ -134,7 +134,7 @@ export function useKatkiInfo(meta: TributaryMeta | null) {
       } catch {
         /* optional */
       }
-      return { file, history, repo, notes, katki: kr.state, provenance: kr.provenance, handles: kr.handles };
+      return { file, history, repo, notes, contribFile: kr.state, provenance: kr.provenance, handles: kr.handles };
     },
   });
 }

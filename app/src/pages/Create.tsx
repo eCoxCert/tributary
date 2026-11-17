@@ -18,6 +18,7 @@ import { ADDR, dfsOptions, explorerAddress, explorerTx, publicClient } from "../
 import { allowanceOf, approveToken, sendCalldata, wethBalance, wrapEth } from "../lib/tx";
 import { estimateFirstBuy } from "../lib/curveMath";
 import { MAX_RECIPIENTS } from "../lib/split";
+import { plural } from "../lib/visibility";
 import { AMMORA_PROTOCOL_TRADING_FEE_SHARE_BPS } from "@ammora-protocol/sdk";
 import { readAllocation, type AllocationRead } from "../lib/allocation";
 import type { VaultSnapshot } from "../lib/launches";
@@ -86,7 +87,7 @@ export function Create() {
   }
 
   useEffect(() => {
-    if (loc.hash === "#katki") document.getElementById("katki")?.scrollIntoView();
+    if (loc.hash === "#format") document.getElementById("format")?.scrollIntoView();
   }, [loc.hash]);
 
   /* Simulate as soon as the review is open and a wallet is connected. */
@@ -102,7 +103,7 @@ export function Create() {
         const p = await buildCreatePlan({
           owner: w.address as Address,
           repo: `${found.ref.owner}/${found.ref.name}`,
-          katkiCommit: found.sha,
+          fileCommit: found.sha,
           recipients: selection.included.map((i) => ({ wallet: i.wallet as Address, bps: i.bps })),
           name: name.trim(),
           symbol: symbol.toUpperCase(),
@@ -255,7 +256,7 @@ export function Create() {
 
   const feePct = tpl.data ? tpl.data.feeBps / 100 : null;
   const protocolPct = AMMORA_PROTOCOL_TRADING_FEE_SHARE_BPS / 100;
-  const katkiInfoForPanel = useMemo(() => (found ? { file: found.file, history: found.history, repo: found.info, notes: [], katki: { state: "ok" as const, wallets: found.file.contributors.map((c) => c.wallet) }, provenance: { state: "ok" as const }, handles: { state: "ok" as const } } : undefined), [found]);
+  const contribFileInfoForPanel = useMemo(() => (found ? { file: found.file, history: found.history, repo: found.info, notes: [], contribFile: { state: "ok" as const, wallets: found.file.contributors.map((c) => c.wallet) }, provenance: { state: "ok" as const }, handles: { state: "ok" as const } } : undefined), [found]);
 
   return (
     <main className="page">
@@ -282,7 +283,7 @@ export function Create() {
             <section className="step-card" aria-labelledby="s1">
               <div className="step-hd">
                 <h2 id="s1">Repository</h2>
-                <p>Paste a public GitHub repository. Tributary reads <span className="mono">.katki.json</span> from its default branch.</p>
+                <p>Paste a public GitHub repository. Tributary reads <span className="mono">.tributary.json</span> from its default branch.</p>
               </div>
               <form className="field" noValidate onSubmit={(e) => { e.preventDefault(); void read(repo); }}>
                 <label htmlFor="repo">GitHub repository</label>
@@ -300,10 +301,10 @@ export function Create() {
                   </p>
                 )}
               </form>
-              <p className="hint">Try <button type="button" className="link" onClick={() => { setRepo("octocat/Hello-World"); void read("octocat/Hello-World"); }}>octocat/Hello-World</button>, a real public repository. It has no <span className="mono">.katki.json</span>, so it shows the "missing file" guide, not a launch.</p>
+              <p className="hint">Try <button type="button" className="link" onClick={() => { setRepo("octocat/Hello-World"); void read("octocat/Hello-World"); }}>octocat/Hello-World</button>, a real public repository. It has no <span className="mono">.tributary.json</span>, so it shows the "missing file" guide, not a launch.</p>
               {(phase === "empty" || result?.stage === "error") && (
                 <dl className="kv reads fmt">
-                  <div><dt>Tributary reads</dt><dd><span className="mono">.katki.json</span> at the root of the default branch</dd></div>
+                  <div><dt>Tributary reads</dt><dd><span className="mono">.tributary.json</span> at the root of the default branch</dd></div>
                   <div><dt>It records</dt><dd>the commit hash the file was read at</dd></div>
                   <div><dt>It weighs</dt><dd>each listed person by their GitHub commit count</dd></div>
                   <div><dt>It never asks for</dt><dd>repository write access or a GitHub login</dd></div>
@@ -328,13 +329,13 @@ export function Create() {
             {/* Invalid */}
             {result?.stage === "invalid" && (
               <section className="step-card panel" aria-labelledby="inv-h">
-                <div className="panel-hd"><h3 id="inv-h">.katki.json needs changes</h3><span className="tag" style={{ marginLeft: "auto" }}>Step 2 blocked</span></div>
+                <div className="panel-hd"><h3 id="inv-h">.tributary.json needs changes</h3><span className="tag" style={{ marginLeft: "auto" }}>Step 2 blocked</span></div>
                 <div className="missing">
                   <p className="muted" style={{ fontSize: 14, maxWidth: "62ch" }}>
                     Found the file at <span className="mono">{result.sha.slice(0, 7)}</span> on <span className="mono">{result.info.defaultBranch}</span>, but it failed validation. Nothing was sent to the chain. Fix the {result.errors.length} problem{result.errors.length > 1 ? "s" : ""} below, merge, then check again.
                   </p>
                   <ul className="err-list">{result.errors.map((e, i) => <li key={i}>{e.message}</li>)}</ul>
-                  <div><button className="btn btn-sm" type="button" onClick={() => void read(repo)}>Check again</button> <Link className="btn btn-sm" to="/katki">Format reference</Link></div>
+                  <div><button className="btn btn-sm" type="button" onClick={() => void read(repo)}>Check again</button> <Link className="btn btn-sm" to="/format">Format reference</Link></div>
                 </div>
               </section>
             )}
@@ -348,7 +349,7 @@ export function Create() {
                 </div>
                 <div className="found">
                   <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" style={{ color: "var(--pos)" }} aria-hidden="true"><path d="M4 10.5 8 14.5 16 5.5" /></svg>
-                  <span>Found <span className="mono">.katki.json</span> on <span className="mono">{found.info.defaultBranch}</span> at <span className="mono">{found.sha.slice(0, 7)}</span>. {found.file.contributors.length} listed, all are repository contributors with a valid wallet.</span>
+                  <span>Found <span className="mono">.tributary.json</span> on <span className="mono">{found.info.defaultBranch}</span> at <span className="mono">{found.sha.slice(0, 7)}</span>. {found.file.contributors.length} listed, all are repository contributors with a valid wallet.</span>
                 </div>
                 {found.warnings.length > 0 && <Banner kind="warn">{found.warnings.map((x) => x.message).join(" ")}</Banner>}
                 {!selection.ok && <Banner kind="err"><b>This launch is blocked.</b> {selection.reason}</Banner>}
@@ -372,10 +373,10 @@ export function Create() {
                 </div>
                 <div className="pick">
                   {selection.ok && selection.excluded.length > 0 && (
-                    <span><b>Not included in the vault ({selection.excluded.length}):</b> {selection.excluded.map((e) => e.github).join(", ")}. They are listed in .katki.json but rank below the top {MAX_RECIPIENTS} by commits.</span>
+                    <span><b>Not included in the vault ({selection.excluded.length}):</b> {selection.excluded.map((e) => e.github).join(", ")}. They are listed in .tributary.json but rank below the top {MAX_RECIPIENTS} by commits.</span>
                   )}
                   {found.notInFile.length > 0 && (
-                    <span><b>Not in .katki.json ({found.notInFile.length}):</b> {found.notInFile.slice(0, 10).map((c) => c.login).join(", ")}{found.notInFile.length > 10 ? ` and ${found.notInFile.length - 10} more` : ""}. They get no share.</span>
+                    <span><b>Not in .tributary.json ({found.notInFile.length}):</b> {found.notInFile.slice(0, 10).map((c) => c.login).join(", ")}{found.notInFile.length > 10 ? ` and ${found.notInFile.length - 10} more` : ""}. They get no share.</span>
                   )}
                   {selection.ok && selection.mode === "vault" && <span>Shares are the commit counts of the {selection.included.length} included contributors, scaled to 10,000 basis points. Rounding goes to the largest share.</span>}
                 </div>
@@ -408,7 +409,7 @@ export function Create() {
                     <span className="affix">ETH</span>
                   </div>
                   <span className="hint">
-                    Buy {firstBuy.trim() && firstBuyOk ? "" : "some "}tokens in the launch transaction itself, at the starting price, then send them to the {selection?.ok ? selection.included.length : ""} fee recipients by commit share. Each send is an ordinary token transfer from your wallet, and nothing on chain forces them. Leave empty for no allocation.
+                    Buy {firstBuy.trim() && firstBuyOk ? "" : "some "}tokens in the launch transaction itself, at the starting price, then send them to {selection?.ok ? `the ${plural(selection.included.length, "fee recipient")}` : "the fee recipients"} by commit share. Each send is an ordinary token transfer from your wallet, and nothing on chain forces them. Leave empty for no allocation.
                   </span>
                   {!firstBuyOk && <span className="err">Enter an ETH amount, for example 0.01.</span>}
                 </div>
@@ -436,7 +437,7 @@ export function Create() {
                 <div className="panel-bd">
                   <dl className="kv">
                     <div><dt>Repository</dt><dd>{found.ref.owner}/{found.ref.name}</dd></div>
-                    <div><dt>.katki.json</dt><dd><span className="mono">{found.info.defaultBranch} @ {found.sha.slice(0, 7)}</span>, {selection.mode === "direct" ? "1, paid directly" : `${selection.included.length} in the fee vault`}</dd></div>
+                    <div><dt>.tributary.json</dt><dd><span className="mono">{found.info.defaultBranch} @ {found.sha.slice(0, 7)}</span>, {selection.mode === "direct" ? "1, paid directly" : `${selection.included.length} in the fee vault`}</dd></div>
                     <div><dt>Token</dt><dd>{name.trim()} ({symbol.toUpperCase()})</dd></div>
                     {tpl.data && <div><dt>Supply</dt><dd>{fmt.compact(Number(tpl.data.supply) / 10 ** tpl.data.tokenDecimals)}, of which {fmt.compact(tpl.data.totalBase / 10 ** tpl.data.tokenDecimals)} on the curve</dd></div>}
                     <div><dt>Contributor allocation</dt><dd>{firstBuyWei && firstBuyWei > 0n ? `${fmt.eth(firstBuyWei)} ETH first buy, then ${selection.included.length} transfers` : "None"}</dd></div>
@@ -513,7 +514,7 @@ export function Create() {
                     decimals={tpl.data?.tokenDecimals ?? 9}
                     creator={w.address as Address}
                     recipients={selection.included.map((i) => ({ recipient: i.wallet as Address, share: BigInt(i.bps) }))}
-                    info={katkiInfoForPanel}
+                    info={contribFileInfoForPanel}
                     alloc={doneAlloc.data as AllocationRead | undefined}
                     loading={doneAlloc.isPending}
                     refreshing={doneAlloc.isFetching}

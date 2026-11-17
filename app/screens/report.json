@@ -2,6 +2,102 @@
   {
     "route": "home",
     "theme": "dark",
+    "width": 1440,
+    "overflow": false,
+    "cutCode": 0,
+    "overlaps": 0,
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "rows": 1,
+    "h1": "Token launches that pay a repo's contributors",
+    "appliedTheme": "dark",
+    "errors": [
+      "requestfailed: https://ammora-giwa-sepolia-data.fly.dev/v1/tokens?chainId=91342 net::ERR_ABORTED"
+    ],
+    "file": "home-dark-1440.png"
+  },
+  {
+    "route": "launches",
+    "theme": "dark",
+    "width": 1440,
+    "overflow": false,
+    "cutCode": 0,
+    "overlaps": 0,
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "rows": 1,
+    "h1": "Launches",
+    "appliedTheme": "dark",
+    "errors": [
+      "requestfailed: https://ammora-giwa-sepolia-data.fly.dev/v1/tokens?chainId=91342 net::ERR_ABORTED"
+    ],
+    "file": "launches-dark-1440.png"
+  },
+  {
+    "route": "launches-all",
+    "theme": "dark",
+    "width": 1440,
+    "overflow": false,
+    "cutCode": 0,
+    "overlaps": 0,
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "rows": 25,
+    "h1": "Launches",
+    "appliedTheme": "dark",
+    "errors": [
+      "requestfailed: https://ammora-giwa-sepolia-data.fly.dev/v1/tokens?chainId=91342 net::ERR_ABORTED"
+    ],
+    "file": "launches-all-dark-1440.png"
+  },
+  {
+    "route": "launch-real",
+    "theme": "dark",
+    "width": 1440,
+    "overflow": false,
+    "cutCode": 0,
+    "overlaps": 0,
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "rows": 0,
+    "h1": "EMP EMP",
+    "appliedTheme": "dark",
+    "errors": [],
+    "file": "launch-real-dark-1440.png"
+  },
+  {
+    "route": "create",
+    "theme": "dark",
+    "width": 1440,
+    "overflow": false,
+    "cutCode": 0,
+    "overlaps": 0,
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "rows": 0,
+    "h1": "Launch a repo",
+    "appliedTheme": "dark",
+    "errors": [],
+    "file": "create-dark-1440.png"
+  },
+  {
+    "route": "format",
+    "theme": "dark",
+    "width": 1440,
+    "overflow": false,
+    "cutCode": 0,
+    "overlaps": 0,
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "rows": 0,
+    "h1": ".tributary.json format",
+    "appliedTheme": "dark",
+    "errors": [],
+    "file": "format-dark-1440.png"
+  },
+  {
+    "route": "home",
+    "theme": "dark",
     "width": 375,
     "overflow": false,
     "cutCode": 0,
@@ -81,7 +177,7 @@
     "file": "create-dark-375.png"
   },
   {
-    "route": "katki",
+    "route": "format",
     "theme": "dark",
     "width": 375,
     "overflow": false,
@@ -90,106 +186,106 @@
     "scrollWidth": 375,
     "clientWidth": 375,
     "rows": 0,
-    "h1": ".katki.json format",
+    "h1": ".tributary.json format",
     "appliedTheme": "dark",
     "errors": [],
-    "file": "katki-dark-375.png"
+    "file": "format-dark-375.png"
   },
   {
     "route": "home",
-    "theme": "dark",
-    "width": 320,
-    "overflow": true,
+    "theme": "light",
+    "width": 1440,
+    "overflow": false,
     "cutCode": 0,
-    "overlaps": 4,
-    "scrollWidth": 349,
-    "clientWidth": 320,
+    "overlaps": 0,
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
     "rows": 1,
     "h1": "Token launches that pay a repo's contributors",
-    "appliedTheme": "dark",
+    "appliedTheme": "light",
     "errors": [
       "requestfailed: https://ammora-giwa-sepolia-data.fly.dev/v1/tokens?chainId=91342 net::ERR_ABORTED"
     ],
-    "file": "home-dark-320.png"
+    "file": "home-light-1440.png"
   },
   {
     "route": "launches",
-    "theme": "dark",
-    "width": 320,
-    "overflow": true,
+    "theme": "light",
+    "width": 1440,
+    "overflow": false,
     "cutCode": 0,
     "overlaps": 0,
-    "scrollWidth": 349,
-    "clientWidth": 320,
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
     "rows": 1,
     "h1": "Launches",
-    "appliedTheme": "dark",
+    "appliedTheme": "light",
     "errors": [
       "requestfailed: https://ammora-giwa-sepolia-data.fly.dev/v1/tokens?chainId=91342 net::ERR_ABORTED"
     ],
-    "file": "launches-dark-320.png"
+    "file": "launches-light-1440.png"
   },
   {
     "route": "launches-all",
-    "theme": "dark",
-    "width": 320,
-    "overflow": true,
+    "theme": "light",
+    "width": 1440,
+    "overflow": false,
     "cutCode": 0,
     "overlaps": 0,
-    "scrollWidth": 349,
-    "clientWidth": 320,
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
     "rows": 25,
     "h1": "Launches",
-    "appliedTheme": "dark",
+    "appliedTheme": "light",
     "errors": [
       "requestfailed: https://ammora-giwa-sepolia-data.fly.dev/v1/tokens?chainId=91342 net::ERR_ABORTED"
     ],
-    "file": "launches-all-dark-320.png"
+    "file": "launches-all-light-1440.png"
   },
   {
     "route": "launch-real",
-    "theme": "dark",
-    "width": 320,
-    "overflow": true,
+    "theme": "light",
+    "width": 1440,
+    "overflow": false,
     "cutCode": 0,
     "overlaps": 0,
-    "scrollWidth": 349,
-    "clientWidth": 320,
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
     "rows": 0,
     "h1": "EMP EMP",
-    "appliedTheme": "dark",
+    "appliedTheme": "light",
     "errors": [],
-    "file": "launch-real-dark-320.png"
+    "file": "launch-real-light-1440.png"
   },
   {
     "route": "create",
-    "theme": "dark",
-    "width": 320,
-    "overflow": true,
+    "theme": "light",
+    "width": 1440,
+    "overflow": false,
     "cutCode": 0,
     "overlaps": 0,
-    "scrollWidth": 349,
-    "clientWidth": 320,
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
     "rows": 0,
     "h1": "Launch a repo",
-    "appliedTheme": "dark",
+    "appliedTheme": "light",
     "errors": [],
-    "file": "create-dark-320.png"
+    "file": "create-light-1440.png"
   },
   {
-    "route": "katki",
-    "theme": "dark",
-    "width": 320,
-    "overflow": true,
+    "route": "format",
+    "theme": "light",
+    "width": 1440,
+    "overflow": false,
     "cutCode": 0,
     "overlaps": 0,
-    "scrollWidth": 349,
-    "clientWidth": 320,
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
     "rows": 0,
-    "h1": ".katki.json format",
-    "appliedTheme": "dark",
+    "h1": ".tributary.json format",
+    "appliedTheme": "light",
     "errors": [],
-    "file": "katki-dark-320.png"
+    "file": "format-light-1440.png"
   },
   {
     "route": "home",
@@ -273,7 +369,7 @@
     "file": "create-light-375.png"
   },
   {
-    "route": "katki",
+    "route": "format",
     "theme": "light",
     "width": 375,
     "overflow": false,
@@ -282,105 +378,9 @@
     "scrollWidth": 375,
     "clientWidth": 375,
     "rows": 0,
-    "h1": ".katki.json format",
+    "h1": ".tributary.json format",
     "appliedTheme": "light",
     "errors": [],
-    "file": "katki-light-375.png"
-  },
-  {
-    "route": "home",
-    "theme": "light",
-    "width": 320,
-    "overflow": true,
-    "cutCode": 0,
-    "overlaps": 4,
-    "scrollWidth": 349,
-    "clientWidth": 320,
-    "rows": 1,
-    "h1": "Token launches that pay a repo's contributors",
-    "appliedTheme": "light",
-    "errors": [
-      "requestfailed: https://ammora-giwa-sepolia-data.fly.dev/v1/tokens?chainId=91342 net::ERR_ABORTED"
-    ],
-    "file": "home-light-320.png"
-  },
-  {
-    "route": "launches",
-    "theme": "light",
-    "width": 320,
-    "overflow": true,
-    "cutCode": 0,
-    "overlaps": 0,
-    "scrollWidth": 349,
-    "clientWidth": 320,
-    "rows": 1,
-    "h1": "Launches",
-    "appliedTheme": "light",
-    "errors": [
-      "requestfailed: https://ammora-giwa-sepolia-data.fly.dev/v1/tokens?chainId=91342 net::ERR_ABORTED"
-    ],
-    "file": "launches-light-320.png"
-  },
-  {
-    "route": "launches-all",
-    "theme": "light",
-    "width": 320,
-    "overflow": true,
-    "cutCode": 0,
-    "overlaps": 0,
-    "scrollWidth": 349,
-    "clientWidth": 320,
-    "rows": 25,
-    "h1": "Launches",
-    "appliedTheme": "light",
-    "errors": [
-      "requestfailed: https://ammora-giwa-sepolia-data.fly.dev/v1/tokens?chainId=91342 net::ERR_ABORTED"
-    ],
-    "file": "launches-all-light-320.png"
-  },
-  {
-    "route": "launch-real",
-    "theme": "light",
-    "width": 320,
-    "overflow": true,
-    "cutCode": 0,
-    "overlaps": 0,
-    "scrollWidth": 349,
-    "clientWidth": 320,
-    "rows": 0,
-    "h1": "EMP EMP",
-    "appliedTheme": "light",
-    "errors": [],
-    "file": "launch-real-light-320.png"
-  },
-  {
-    "route": "create",
-    "theme": "light",
-    "width": 320,
-    "overflow": true,
-    "cutCode": 0,
-    "overlaps": 0,
-    "scrollWidth": 349,
-    "clientWidth": 320,
-    "rows": 0,
-    "h1": "Launch a repo",
-    "appliedTheme": "light",
-    "errors": [],
-    "file": "create-light-320.png"
-  },
-  {
-    "route": "katki",
-    "theme": "light",
-    "width": 320,
-    "overflow": true,
-    "cutCode": 0,
-    "overlaps": 0,
-    "scrollWidth": 349,
-    "clientWidth": 320,
-    "rows": 0,
-    "h1": ".katki.json format",
-    "appliedTheme": "light",
-    "errors": [],
-    "file": "katki-light-320.png"
+    "file": "format-light-375.png"
   }
 ]

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { getContributorsInfo, getKatkiText, hasCommitsBy, isAncestorOfDefault, rateLimitNote, type Deps } from "./github";
-import { readKatkiState } from "./katkiCheck";
+import { getContributorsInfo, getContribFileText, hasCommitsBy, isAncestorOfDefault, rateLimitNote, type Deps } from "./github";
+import { readContribFileState } from "./contribFileCheck";
 import { rowTitle } from "./visibility";
 
 const ref = { owner: "o", name: "r" };
@@ -58,12 +58,12 @@ describe("cache lifetimes", () => {
     await getContributorsInfo(ref, d());
     expect(calls).toBe(2);
   });
-  it("a missing .katki.json and a not-ancestor answer are not cached", async () => {
+  it("a missing .tributary.json and a not-ancestor answer are not cached", async () => {
     const s = store();
     let calls = 0;
     const d = () => mk(async (u) => { calls++; return String(u).includes("raw.") ? new Response("", { status: 404 }) : json(200, { status: "diverged" }); }, () => 0, s);
-    await getKatkiText(ref, SHA, d());
-    await getKatkiText(ref, SHA, d());
+    await getContribFileText(ref, SHA, d());
+    await getContribFileText(ref, SHA, d());
     await isAncestorOfDefault(ref, SHA, "main", d());
     await isAncestorOfDefault(ref, SHA, "main", d());
     expect(calls).toBe(4);
@@ -92,15 +92,15 @@ describe("repositories with more than 500 contributors", () => {
     return json(200, { full_name: "o/r", default_branch: "main", private: false });
   };
   it("a handle outside the cut-off list is checked exactly: a commit by that author means contributor", async () => {
-    const r = await readKatkiState("o/r", SHA, mk(route(() => json(200, [{ sha: "x" }]))));
+    const r = await readContribFileState("o/r", SHA, mk(route(() => json(200, [{ sha: "x" }]))));
     expect(r.handles.state).toBe("ok");
   });
   it("an empty commit list for the author means not a contributor (mismatch)", async () => {
-    const r = await readKatkiState("o/r", SHA, mk(route(() => json(200, []))));
+    const r = await readContribFileState("o/r", SHA, mk(route(() => json(200, []))));
     expect(r.handles.state).toBe("mismatch");
   });
   it("an unreadable exact check is unavailable, never ok", async () => {
-    const r = await readKatkiState("o/r", SHA, mk(route(() => json(500, {}))));
+    const r = await readContribFileState("o/r", SHA, mk(route(() => json(500, {}))));
     expect(r.handles.state).toBe("unavailable");
   });
   it("more than 5 handles outside the cut-off list are not checked one by one: unavailable, and no exact requests", async () => {
@@ -114,7 +114,7 @@ describe("repositories with more than 500 contributors", () => {
       if (url.includes("/contributors")) return json(200, page(100));
       return json(200, { full_name: "o/r", default_branch: "main", private: false });
     };
-    const r = await readKatkiState("o/r", SHA, mk(f));
+    const r = await readContribFileState("o/r", SHA, mk(f));
     expect(r.handles.state).toBe("unavailable");
     expect(exact).toBe(0);
   });
@@ -128,7 +128,7 @@ describe("repositories with more than 500 contributors", () => {
       if (url.includes("/contributors")) return json(200, [{ login: "alice", contributions: 5 }]);
       return json(200, { full_name: "o/r", default_branch: "main", private: false });
     };
-    const r = await readKatkiState("o/r", SHA, mk(f));
+    const r = await readContribFileState("o/r", SHA, mk(f));
     expect(r.handles.state).toBe("mismatch");
     expect(exact).toBe(0);
   });

@@ -1,14 +1,14 @@
 /**
- * Reads .katki.json at the commit recorded in a launch (raw.githubusercontent.com: no API quota) and checks the
+ * Reads .tributary.json at the commit recorded in a launch (raw.githubusercontent.com: no API quota) and checks the
  * repository side: is that commit on the default branch, and are the listed handles real contributors?
  * 404 / invalid / not an ancestor / unknown handle are facts about the repository (mismatch);
  * network and rate-limit are "could not check" (unverifiable). `reason` is a full sentence for the reader.
  */
-import { getContributorsInfo, getKatkiText, getRepoInfo, hasCommitsBy, isAncestorOfDefault, parseRepoInput, GitHubError, defaultDeps, type Deps, type RepoRef } from "./github";
-import { checkAgainstHistory, parseKatki, type KatkiFile } from "./katki";
-import type { KatkiState, RepoCheck } from "./verify";
+import { getContributorsInfo, getContribFileText, getRepoInfo, hasCommitsBy, isAncestorOfDefault, parseRepoInput, GitHubError, defaultDeps, type Deps, type RepoRef } from "./github";
+import { checkAgainstHistory, parseContribFile, type ContribFileData } from "./contribFile";
+import type { ContribFileState, RepoCheck } from "./verify";
 
-export type KatkiRead = { state: KatkiState; file: KatkiFile | null; provenance: RepoCheck; handles: RepoCheck };
+export type ContribFileRead = { state: ContribFileState; file: ContribFileData | null; provenance: RepoCheck; handles: RepoCheck };
 
 const unavailableCheck = (e: unknown): RepoCheck => ({ state: "unavailable", reason: e instanceof GitHubError ? e.message : "GitHub could not be reached." });
 const skipped: RepoCheck = { state: "ok" }; // irrelevant: the file itself already failed
@@ -18,7 +18,7 @@ export const MAX_EXACT_CHECKS = 5;
  * Handles must be repository contributors. GitHub's contributor list stops at 500 people, so when it was cut off a
  * handle that is missing from it is checked exactly (any commit by that author), for at most 5 handles.
  */
-export async function resolveHandles(file: KatkiFile, ref: RepoRef, deps: Deps): Promise<RepoCheck> {
+export async function resolveHandles(file: ContribFileData, ref: RepoRef, deps: Deps): Promise<RepoCheck> {
   try {
     const { list, truncated } = await getContributorsInfo(ref, deps);
     const c = checkAgainstHistory(file, list);
@@ -35,15 +35,15 @@ export async function resolveHandles(file: KatkiFile, ref: RepoRef, deps: Deps):
   }
 }
 
-export async function readKatkiState(repo: string, sha: string, deps: Deps = defaultDeps()): Promise<KatkiRead> {
+export async function readContribFileState(repo: string, sha: string, deps: Deps = defaultDeps()): Promise<ContribFileRead> {
   const ref = parseRepoInput(repo);
   if (!ref) return { state: { state: "invalid" }, file: null, provenance: skipped, handles: skipped };
-  let file: KatkiFile;
-  let state: KatkiState;
+  let file: ContribFileData;
+  let state: ContribFileState;
   try {
-    const text = await getKatkiText(ref, sha, deps);
+    const text = await getContribFileText(ref, sha, deps);
     if (text === null) return { state: { state: "missing" }, file: null, provenance: skipped, handles: skipped };
-    const p = parseKatki(text);
+    const p = parseContribFile(text);
     if (!p.ok) return { state: { state: "invalid" }, file: null, provenance: skipped, handles: skipped };
     file = p.file;
     state = { state: "ok", wallets: p.file.contributors.map((c) => c.wallet) };
