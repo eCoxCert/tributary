@@ -34,15 +34,15 @@ export async function fixtureLaunch(kind: string): Promise<LaunchData> {
 }
 
 export function fixtureVault(kind: string): VaultSnapshot {
-  const unclaimed = [31_000_000_000_000n, 12_000_000_000_000n, 4_000_000_000_000n, 2_500_000_000_000n, 900_000_000_000n];
+  const unclaimed = [31_000_000_000_000000n, 12_000_000_000_000000n, 4_000_000_000_000000n, 2_500_000_000_000000n, 900_000_000_000000n];
   return {
     vault: FIXTURE_VAULT,
     owner: kind === "mismatch" ? (included[0]!.wallet as Address) : FIXTURE_OWNER,
-    recipients: included.map((r, i) => ({ index: i, recipient: r.wallet as Address, share: BigInt(r.bps), claimed: i === 0 ? 42_000_000_000_000n : 0n, claimable: unclaimed[i]! })),
+    recipients: included.map((r, i) => ({ index: i, recipient: r.wallet as Address, share: BigInt(r.bps), claimed: i === 0 ? 42_000_000_000_000000n : 0n, claimable: unclaimed[i]! })),
     totalShare: 10_000n,
-    totalFunded: 60_000_000_000_000n,
-    totalClaimed: 42_000_000_000_000n,
-    pendingInFeeVault: 21_000_000_000_000n,
+    totalFunded: 60_000_000_000_000000n,
+    totalClaimed: 42_000_000_000_000000n,
+    pendingInFeeVault: 21_000_000_000_000000n,
     feeVault: FEE_STORE,
     claimSourceEnabled: true,
   };

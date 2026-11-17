@@ -6,7 +6,7 @@
     "overflow": false,
     "scrollWidth": 1440,
     "clientWidth": 1440,
-    "rows": 0,
+    "rows": 1,
     "h1": "Token launches that pay a repo's contributors",
     "appliedTheme": "dark",
     "errors": [
@@ -90,7 +90,7 @@
     "overflow": false,
     "scrollWidth": 375,
     "clientWidth": 375,
-    "rows": 0,
+    "rows": 1,
     "h1": "Token launches that pay a repo's contributors",
     "appliedTheme": "dark",
     "errors": [
@@ -174,7 +174,7 @@
     "overflow": false,
     "scrollWidth": 1440,
     "clientWidth": 1440,
-    "rows": 0,
+    "rows": 1,
     "h1": "Token launches that pay a repo's contributors",
     "appliedTheme": "light",
     "errors": [
@@ -258,7 +258,7 @@
     "overflow": false,
     "scrollWidth": 375,
     "clientWidth": 375,
-    "rows": 0,
+    "rows": 1,
     "h1": "Token launches that pay a repo's contributors",
     "appliedTheme": "light",
     "errors": [

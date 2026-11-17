@@ -1,0 +1,46 @@
+/** Launch-page states with fixture data. Needs the DEV server: npx vite --port 5174  (fixtures are not in the production build). */
+import { chromium } from "playwright";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
+
+const BASE = process.env.BASE_URL ?? "http://localhost:5174/";
+const TOKEN = "0xBFc72c693dF1D0DDdE4bfCFa1bB09A162Fe9f032";
+const OUT = resolve(process.cwd(), "screens");
+mkdirSync(OUT, { recursive: true });
+const states: { name: string; q: string; ready: string }[] = [
+  { name: "ok", q: "fixture=ok", ready: ".a-alloc" },
+  { name: "claim", q: "fixture=ok&fw=me", ready: ".is-you" },
+  { name: "owner-send", q: "fixture=ok&fw=owner", ready: ".a-alloc .btn-primary" },
+  { name: "mismatch", q: "fixture=mismatch", ready: ".banner-warn" },
+  { name: "loading", q: "fixture=loading", ready: ".sk" },
+  { name: "error", q: "fixture=error", ready: ".banner-err" },
+  { name: "wrong-network", q: "fixture=ok&fw=wrong", ready: ".banner-warn" },
+];
+const report: unknown[] = [];
+const browser = await chromium.launch({ channel: "chrome", headless: true });
+for (const [width, height] of [[1440, 900], [375, 812]] as const) {
+  for (const theme of ["light", "dark"] as const) {
+    const ctx = await browser.newContext({ viewport: { width, height }, colorScheme: theme });
+    await ctx.addInitScript((t) => localStorage.setItem("trib-theme", t), theme);
+    for (const s of states) {
+      if (theme === "dark" && !["ok", "mismatch"].includes(s.name)) continue;
+      const page = await ctx.newPage();
+      const errors: string[] = [];
+      page.on("console", (m) => { if (m.type() === "error") errors.push(m.text().slice(0, 200)); });
+      page.on("pageerror", (e) => errors.push("pageerror: " + e.message));
+      await page.goto(`${BASE}#/launch/${TOKEN}?${s.q}`);
+      try { await page.waitForSelector(s.ready, { timeout: 40_000 }); } catch { errors.push("not ready: " + s.ready); }
+      await page.waitForTimeout(s.name === "loading" ? 300 : 2500);
+      const m = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth }));
+      const file = `fixture-${s.name}-${theme}-${width}.png`;
+      await page.screenshot({ path: resolve(OUT, file), fullPage: true });
+      console.log(file.padEnd(40), m.sw > m.cw ? `OVERFLOW ${m.sw}/${m.cw}` : "no overflow", `errors=${errors.length}`);
+      errors.forEach((e) => console.log("   ! " + e));
+      report.push({ file, overflow: m.sw > m.cw, errors });
+      await page.close();
+    }
+    await ctx.close();
+  }
+}
+await browser.close();
+writeFileSync(resolve(OUT, "fixture-report.json"), JSON.stringify(report, null, 2));
