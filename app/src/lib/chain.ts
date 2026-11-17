@@ -12,6 +12,7 @@ export const giwaSepolia = defineChain({
   nativeCurrency: DEP.chain.nativeCurrency,
   rpcUrls: { default: { http: [RPC_URL] } },
   blockExplorers: { default: { name: "GIWA Sepolia Explorer", url: EXPLORER } },
+  contracts: { multicall3: { address: "0xcA11bde05977b3631167028862bE2a173976CA11" } },
   testnet: true,
 });
 
@@ -40,6 +41,7 @@ export const DATA_API = "https://ammora-giwa-sepolia-data.fly.dev";
 
 export const publicClient: PublicClient = createPublicClient({
   chain: giwaSepolia,
+  batch: { multicall: { wait: 24 } },
   transport: http(RPC_URL, { timeout: 10_000, retryCount: 4, retryDelay: 400 }),
 }) as PublicClient;
 

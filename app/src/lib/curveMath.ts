@@ -91,3 +91,27 @@ export function sampleCurve(segments: readonly Segment[], points = 64): CurvePoi
   }
   return out;
 }
+
+/**
+ * Estimated base received for `quoteIn` raw quote units spent from the start of the curve, after a fee in bps.
+ * Used only to set a floor (minimum out) for the owner's first buy; the contract enforces the real price.
+ */
+export function estimateFirstBuy(segments: readonly Segment[], quoteIn: bigint, feeBps: number): bigint {
+  let left = (Number(quoteIn) * (10_000 - feeBps)) / 10_000;
+  let base = 0;
+  for (const s of segments) {
+    const cap = segmentDelta(s, s.lowerSqrtPrice, s.upperSqrtPrice);
+    if (left >= cap.quote) {
+      base += cap.base;
+      left -= cap.quote;
+      continue;
+    }
+    const L = Number(s.liquidity);
+    const sa = Number(s.lowerSqrtPrice);
+    const sb = sa + (left * Q128) / L;
+    base += L * (1 / sa - 1 / sb);
+    left = 0;
+    break;
+  }
+  return BigInt(Math.floor(base));
+}
