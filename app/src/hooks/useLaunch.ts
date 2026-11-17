@@ -20,6 +20,8 @@ export class NotFoundError extends Error {
   }
 }
 
+const fx = () => (typeof window === "undefined" ? null : new URLSearchParams(window.location.hash.split("?")[1] ?? "").get("fixture"));
+
 export function useLaunch(token: string | undefined) {
   const ok = !!token && isAddress(token, { strict: false });
   return useQuery<LaunchData>({
@@ -28,6 +30,10 @@ export function useLaunch(token: string | undefined) {
     refetchInterval: 20_000,
     retry: (n, e) => !(e instanceof NotFoundError) && n < 1,
     queryFn: async () => {
+      if (import.meta.env.DEV && fx()) {
+        const f = await import("../fixtures/tributary");
+        return f.fixtureLaunch(fx() as string);
+      }
       const t = token as Address;
       const curve = (await publicClient.readContract({ address: ADDR.factory, abi: ammoraLaunchFactoryV4Abi, functionName: "curveForToken", args: [t] })) as Address;
       if (!curve || curve === ZERO) throw new NotFoundError();
@@ -46,7 +52,10 @@ export function useLaunchRecord(token: string | undefined, enabled: boolean) {
     queryKey: ["rec", token?.toLowerCase()],
     enabled: enabled && !!token,
     staleTime: Infinity,
-    queryFn: () => findLaunch(token as Address),
+    queryFn: async () => {
+      if (import.meta.env.DEV && fx()) return (await import("../fixtures/tributary")).fixtureRecord;
+      return findLaunch(token as Address);
+    },
   });
 }
 
@@ -64,7 +73,10 @@ export function useVault(vault: Address | undefined) {
     queryKey: ["vault", vault?.toLowerCase()],
     enabled: !!vault,
     refetchInterval: 20_000,
-    queryFn: () => readVaultSnapshot(vault as Address),
+    queryFn: async () => {
+      if (import.meta.env.DEV && fx()) return (await import("../fixtures/tributary")).fixtureVault(fx() as string);
+      return readVaultSnapshot(vault as Address);
+    },
   });
 }
 
@@ -83,6 +95,7 @@ export function useKatkiInfo(meta: TributaryMeta | null) {
     staleTime: 10 * 60_000,
     retry: 0,
     queryFn: async () => {
+      if (import.meta.env.DEV && fx()) return (await import("../fixtures/tributary")).fixtureInfo;
       const ref = parseRepoInput((meta as TributaryMeta).repo);
       if (!ref) return { file: null, history: null, repo: null, notes: ["The repository name in the launch metadata is not valid."] };
       const notes: string[] = [];
@@ -119,7 +132,10 @@ export function useAllocation(rec: LaunchRecord | null | undefined, creator: Add
     staleTime: 15_000,
     refetchInterval: 30_000,
     retry: 1,
-    queryFn: () => readAllocation({ token: (rec as LaunchRecord).token, curve: curve as Address, creator: creator as Address, txHash: (rec as LaunchRecord).txHash, block: (rec as LaunchRecord).block }),
+    queryFn: async () => {
+      if (import.meta.env.DEV && fx()) return (await import("../fixtures/tributary")).fixtureAllocation();
+      return readAllocation({ token: (rec as LaunchRecord).token, curve: curve as Address, creator: creator as Address, txHash: (rec as LaunchRecord).txHash, block: (rec as LaunchRecord).block });
+    },
   });
 }
 

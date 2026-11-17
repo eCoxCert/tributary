@@ -32,12 +32,11 @@ const transferEvent = parseAbiItem("event Transfer(address indexed from, address
 export type AllocationRead = {
   /** Tokens the owner bought in the launch transaction. 0n when there was no first buy. */
   firstBuy: bigint;
-  /** Sum of ERC-20 transfers owner -> address since launch, keyed by lowercase address. */
+  /** Sum of ERC-20 transfers owner -> address since the launch block, keyed by lowercase address. */
   sent: Map<string, bigint>;
-  /** True when the scan did not reach back to the launch block (very old launch). */
-  truncated: boolean;
 };
 
+/** Reads the first buy and every owner transfer from the launch block to the head, in 10,000-block chunks. */
 export async function readAllocation(p: { token: Address; curve: Address; creator: Address; txHash: Hex; block: bigint }, client: PublicClient = publicClient): Promise<AllocationRead> {
   const receipt = await client.getTransactionReceipt({ hash: p.txHash });
   const swaps = parseEventLogs({ abi: ammoraLaunchPoolV4Abi, eventName: "Swap", logs: receipt.logs.filter((l) => l.address.toLowerCase() === p.curve.toLowerCase()) });
@@ -47,10 +46,8 @@ export async function readAllocation(p: { token: Address; curve: Address; creato
     if (!a.baseForQuote && a.recipient.toLowerCase() === p.creator.toLowerCase()) firstBuy += a.amountOut;
   }
   const head = await client.getBlockNumber();
-  const MAX = 400_000n;
-  const from = head - p.block > MAX ? head - MAX : p.block;
   const logs = await scanRanges(
-    splitRangesNewestFirst(from, head),
+    splitRangesNewestFirst(p.block, head),
     (r) => client.getLogs({ address: p.token, event: transferEvent, args: { from: p.creator }, fromBlock: r.from, toBlock: r.to }),
   );
   const sent = new Map<string, bigint>();
@@ -58,5 +55,30 @@ export async function readAllocation(p: { token: Address; curve: Address; creato
     const to = (l.args.to as Address).toLowerCase();
     sent.set(to, (sent.get(to) ?? 0n) + (l.args.value as bigint));
   }
-  return { firstBuy, sent, truncated: from > p.block };
+  return { firstBuy, sent };
+}
+
+export type DistributionItem = { wallet: string; due: bigint };
+
+/**
+ * Sends what is still owed, one transfer at a time. Before EACH transfer it re-reads from the chain how much that
+ * wallet has already received, so a retry after a partial failure (or a send from another tab) never pays twice.
+ */
+export async function runDistribution(opts: {
+  items: readonly DistributionItem[];
+  readSent: (wallet: string) => Promise<bigint>;
+  send: (wallet: string, amount: bigint) => Promise<void>;
+  onStep?: (wallet: string, state: "active" | "done" | "skipped") => void;
+}): Promise<void> {
+  for (const it of opts.items) {
+    opts.onStep?.(it.wallet, "active");
+    const sent = await opts.readSent(it.wallet);
+    const rem = it.due - sent;
+    if (rem <= 0n) {
+      opts.onStep?.(it.wallet, "skipped");
+      continue;
+    }
+    await opts.send(it.wallet, rem);
+    opts.onStep?.(it.wallet, "done");
+  }
 }

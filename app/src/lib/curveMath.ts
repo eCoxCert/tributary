@@ -93,25 +93,25 @@ export function sampleCurve(segments: readonly Segment[], points = 64): CurvePoi
 }
 
 /**
- * Estimated base received for `quoteIn` raw quote units spent from the start of the curve, after a fee in bps.
- * Used only to set a floor (minimum out) for the owner's first buy; the contract enforces the real price.
+ * Base received for `quoteIn` raw quote units spent from the start of the curve, after a fee in bps. Exact integer
+ * maths (no floats), rounded down. The SDK only ships V3 pre-launch quotes, so this covers V4 for the first-buy floor;
+ * the contract still enforces the real price.
  */
 export function estimateFirstBuy(segments: readonly Segment[], quoteIn: bigint, feeBps: number): bigint {
-  let left = (Number(quoteIn) * (10_000 - feeBps)) / 10_000;
-  let base = 0;
+  const Q = 1n << 128n;
+  let left = (quoteIn * BigInt(10_000 - feeBps)) / 10_000n;
+  let base = 0n;
   for (const s of segments) {
-    const cap = segmentDelta(s, s.lowerSqrtPrice, s.upperSqrtPrice);
-    if (left >= cap.quote) {
-      base += cap.base;
-      left -= cap.quote;
+    const L = s.liquidity;
+    const capQuote = (L * (s.upperSqrtPrice - s.lowerSqrtPrice)) / Q;
+    if (left >= capQuote) {
+      base += (L * (s.upperSqrtPrice - s.lowerSqrtPrice)) / (s.lowerSqrtPrice * s.upperSqrtPrice);
+      left -= capQuote;
       continue;
     }
-    const L = Number(s.liquidity);
-    const sa = Number(s.lowerSqrtPrice);
-    const sb = sa + (left * Q128) / L;
-    base += L * (1 / sa - 1 / sb);
-    left = 0;
+    const sb = s.lowerSqrtPrice + (left * Q) / L;
+    base += (L * (sb - s.lowerSqrtPrice)) / (s.lowerSqrtPrice * sb);
     break;
   }
-  return BigInt(Math.floor(base));
+  return base;
 }

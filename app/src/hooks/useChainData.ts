@@ -13,6 +13,7 @@ import {
   type VaultSnapshot,
 } from "../lib/launches";
 import { humanizeError } from "../lib/errors";
+import { verifyTributaryLaunch, type Verification } from "../lib/verify";
 import { sampleCurve, curveTotals, humanPrice } from "../lib/curveMath";
 import { scanRanges, splitRangesNewestFirst } from "../lib/logs";
 import { ammoraAFSVaultAbi } from "@ammora-protocol/sdk";
@@ -73,6 +74,8 @@ export type Card = {
   snap: CurveSnapshot;
   vault: VaultSnapshot | null;
   timestamp: number | null;
+  /** Chain check of a Tributary claim; null for launches that make no such claim. */
+  verified: Verification | null;
 };
 
 async function readCard(rec: LaunchRecord): Promise<Card> {
@@ -81,7 +84,16 @@ async function readCard(rec: LaunchRecord): Promise<Card> {
     rec.meta ? readVaultSnapshot(rec.meta.vault).catch(() => null) : Promise.resolve(null),
     publicClient.getBlock({ blockNumber: rec.block }).catch(() => null),
   ]);
-  return { rec, snap, vault, timestamp: block ? Number(block.timestamp) * 1000 : null };
+  const verified = rec.meta
+    ? verifyTributaryLaunch({
+        metaVault: rec.meta.vault,
+        partnerRecipient: snap.config.partnerRecipient,
+        creatorShareOfNonProtocolBps: snap.config.creatorShareOfNonProtocolBps,
+        creator: snap.state.creator,
+        vault: vault ? { owner: vault.owner, recipients: vault.recipients.map((r) => ({ recipient: r.recipient, share: r.share })) } : null,
+      })
+    : null;
+  return { rec, snap, vault, timestamp: block ? Number(block.timestamp) * 1000 : null, verified };
 }
 
 /** Live data for several launches. Each is its own query so one failure does not hide the others. */

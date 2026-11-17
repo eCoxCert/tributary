@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { splitAllocation, splitByShares } from "./allocation";
+import { runDistribution, splitAllocation, splitByShares } from "./allocation";
 import { estimateFirstBuy, type Segment } from "./curveMath";
 import { readRepository } from "./readRepo";
 import type { Deps } from "./github";
@@ -64,5 +64,33 @@ describe("readRepository", () => {
   });
   it("rejects a bad repo string", async () => {
     expect((await readRepository("nope", deps(null, []))).stage).toBe("error");
+  });
+});
+
+describe("runDistribution", () => {
+  it("does not pay twice after a partial failure", async () => {
+    const chain = new Map<string, bigint>(); // what each wallet has received on chain
+    const paid: [string, bigint][] = [];
+    const items = [{ wallet: "a", due: 100n }, { wallet: "b", due: 50n }, { wallet: "c", due: 25n }];
+    let failB = true;
+    const run = () =>
+      runDistribution({
+        items,
+        readSent: async (w) => chain.get(w) ?? 0n,
+        send: async (w, amt) => {
+          if (w === "b" && failB) throw new Error("rejected");
+          chain.set(w, (chain.get(w) ?? 0n) + amt);
+          paid.push([w, amt]);
+        },
+      });
+    await expect(run()).rejects.toThrow("rejected");
+    failB = false;
+    await run();
+    expect(paid).toEqual([["a", 100n], ["b", 50n], ["c", 25n]]);
+  });
+  it("sends only the remainder when a wallet was already part-paid", async () => {
+    const sent: bigint[] = [];
+    await runDistribution({ items: [{ wallet: "a", due: 100n }], readSent: async () => 60n, send: async (_w, a) => void sent.push(a) });
+    expect(sent).toEqual([40n]);
   });
 });

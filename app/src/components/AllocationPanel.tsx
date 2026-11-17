@@ -7,7 +7,7 @@ import { useWallet } from "../hooks/useWallet";
 import type { KatkiInfo } from "../hooks/useLaunch";
 import type { VaultSnapshot } from "../lib/launches";
 import type { AllocationRead } from "../lib/allocation";
-import { splitByShares } from "../lib/allocation";
+import { runDistribution, readAllocation, splitByShares } from "../lib/allocation";
 import { explorerTx, publicClient } from "../lib/chain";
 import { fmt } from "../lib/format";
 import { humanizeError } from "../lib/errors";
@@ -35,8 +35,9 @@ export function AllocationPanel(p: {
   info: KatkiInfo | undefined;
   alloc: AllocationRead | undefined;
   loading: boolean;
+  refreshing?: boolean;
   error: string | null;
-  autoStart?: boolean;
+  rec: { txHash: `0x${string}`; block: bigint; curve: Address } | null;
 }) {
   const w = useWallet();
   const { data: wallet } = useWalletClient();
@@ -60,35 +61,49 @@ export function AllocationPanel(p: {
   const remaining = pending.reduce((a, r) => a + (r.due - r.sent), 0n);
 
   async function send() {
-    if (!wallet || !w.address) return;
+    if (!wallet || !w.address || !p.rec) return;
     const account = w.address as Address;
+    const rec = p.rec;
     setErr(null);
     setBusy(true);
-    let list: ProgressStep[] = pending.map((r) => ({ id: r.wallet, label: `Send ${fmt.tokens(r.due - r.sent, p.decimals)} ${p.symbol} to ${r.github ?? fmt.short(r.wallet)}`, state: "todo" as const }));
+    let list: ProgressStep[] = pending.map((r) => ({ id: r.wallet, label: `Send ${r.github ?? fmt.short(r.wallet)} their remaining ${p.symbol}`, state: "todo" as const }));
     setSteps(list);
-    let current = "";
     const mark = (id: string, state: ProgressStep["state"], note?: string) => {
       list = list.map((s) => (s.id === id ? { ...s, state, note } : s));
       setSteps(list);
     };
+    let current = "";
     try {
-      const bal = await tokenBalance(publicClient, p.token, account);
-      if (bal < remaining) throw new Error(`This wallet holds ${fmt.tokens(bal, p.decimals)} ${p.symbol}, which is less than the ${fmt.tokens(remaining, p.decimals)} still to send.`);
-      for (const r of pending) {
-        current = r.wallet;
-        mark(r.wallet, "active", "Confirm in your wallet");
-        const res = await transferToken(wallet, publicClient, account, p.token, r.wallet, r.due - r.sent);
-        setLastTx(res.hash);
-        mark(r.wallet, "done");
-      }
-      await Promise.all([qc.invalidateQueries({ queryKey: ["alloc"] }), qc.invalidateQueries({ queryKey: ["bal-owner"] })]);
+      const fresh = await readAllocation({ token: p.token, curve: rec.curve, creator: p.creator, txHash: rec.txHash, block: rec.block });
+      const dues = new Map(allocationRows(p.vault, p.info, fresh).map((r) => [r.wallet.toLowerCase(), r.due]));
+      await runDistribution({
+        items: pending.map((r) => ({ wallet: r.wallet, due: dues.get(r.wallet.toLowerCase()) ?? r.due })),
+        // re-read on chain before every transfer: never pay a wallet twice
+        readSent: async (wlt) => (await readAllocation({ token: p.token, curve: rec.curve, creator: p.creator, txHash: rec.txHash, block: rec.block })).sent.get(wlt.toLowerCase()) ?? 0n,
+        send: async (wlt, amount) => {
+          current = wlt;
+          mark(wlt, "active", "Confirm in your wallet");
+          const bal = await tokenBalance(publicClient, p.token, account);
+          if (bal < amount) throw new Error(`This wallet holds ${fmt.tokens(bal, p.decimals)} ${p.symbol}, less than the ${fmt.tokens(amount, p.decimals)} to send.`);
+          const res = await transferToken(wallet, publicClient, account, p.token, wlt as Address, amount);
+          setLastTx(res.hash);
+        },
+        onStep: (wlt, st) => {
+          if (st === "done") mark(wlt, "done");
+          else if (st === "skipped") mark(wlt, "skipped", "Already received");
+          else mark(wlt, "active", "Checking the chain");
+        },
+      });
     } catch (e) {
       setErr(humanizeError(e));
       if (current) mark(current, "error");
     } finally {
+      // stay locked until fresh chain data is back
+      await Promise.all([qc.invalidateQueries({ queryKey: ["alloc"] }), qc.invalidateQueries({ queryKey: ["done-alloc"] }), qc.invalidateQueries({ queryKey: ["bal-owner"] })]);
       setBusy(false);
     }
   }
+  const locked = busy || p.refreshing;
 
   return (
     <section className="panel a-alloc" aria-labelledby="alloc-h">
@@ -123,10 +138,9 @@ export function AllocationPanel(p: {
                 ))}
               </tbody>
             </table>
-            {p.alloc.truncated && <p className="muted-note">This launch is older than the 400,000 blocks scanned for transfers, so older sends may be missing.</p>}
             {isOwner && pending.length > 0 && (
               <div>
-                <button className="btn btn-primary" type="button" onClick={send} disabled={busy || (ownerBal.data !== undefined && ownerBal.data < remaining)}>
+                <button className="btn btn-primary" type="button" onClick={send} disabled={locked || !p.rec || (ownerBal.data !== undefined && ownerBal.data < remaining)}>
                   {busy ? <><Spinner />Sending</> : `Send ${fmt.tokens(remaining, p.decimals)} ${p.symbol} to ${pending.length} contributor${pending.length > 1 ? "s" : ""}`}
                 </button>
                 <p className="muted-note" style={{ marginTop: 8 }}>One transfer per contributor, each confirmed in your wallet. You can stop and come back: this page works out what is left.</p>

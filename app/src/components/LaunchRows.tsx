@@ -38,7 +38,9 @@ export function rowModel(card: Card): RowModel {
   const { rec, snap, vault, timestamp } = card;
   const st = statusOf(card);
   const pct = Math.min(100, Math.round(snap.progress.progressBps / 100));
-  const left = st === "grad" ? "In pool" : `${fmt.eth(snap.progress.target > snap.progress.current ? snap.progress.target - snap.progress.current : 0n, 4)} ETH`;
+  const remaining = snap.progress.target > snap.progress.current ? snap.progress.target - snap.progress.current : 0n;
+  const remEth = Number(remaining) / 1e18;
+  const left = st === "grad" ? "In pool" : snap.progress.progressBps >= 10_000 ? "Ready" : `${remEth > 1000 ? fmt.compact(remEth) : fmt.eth(remaining)} ETH`;
   const fees = vault ? `${fmt.eth(vault.totalFunded + vault.pendingInFeeVault)} ETH` : null;
   const age = timestamp ? fmt.ago(timestamp) : null;
   return {

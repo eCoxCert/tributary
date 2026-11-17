@@ -16,7 +16,11 @@ export function useWallet() {
   const { switchChainAsync, isPending: switching } = useSwitchChain();
   const [error, setError] = useState<string | null>(null);
 
-  const status: WalletStatus = !isConnected ? "disconnected" : chainId !== CHAIN_ID ? "wrong" : "connected";
+  const fw: string | null = import.meta.env.DEV && typeof window !== "undefined" ? new URLSearchParams(window.location.hash.split("?")[1] ?? "").get("fw") : null;
+  const status0: WalletStatus = !isConnected ? "disconnected" : chainId !== CHAIN_ID ? "wrong" : "connected";
+
+  const fxWallet = import.meta.env.DEV && fw ? (fw === "wrong" ? { status: "wrong" as WalletStatus, address: "0x1111111111111111111111111111111111111111" } : fw === "owner" ? { status: "connected" as WalletStatus, address: "0x1111111111111111111111111111111111111111" } : fw === "me" ? { status: "connected" as WalletStatus, address: "0x776613ba8b8608F1e0805a1d87C902FE76cd9c30" } : null) : null;
+  const status: WalletStatus = fxWallet ? fxWallet.status : status0;
 
   const connect = useCallback(async () => {
     setError(null);
@@ -43,5 +47,5 @@ export function useWallet() {
     }
   }, [switchChainAsync]);
 
-  return { address, status, connect, connecting, switchNetwork, switching, disconnect, error, chainId, clearError: () => setError(null) };
+  return { address: (fxWallet ? fxWallet.address : address) as `0x${string}` | undefined, status, connect, connecting, switchNetwork, switching, disconnect, error, chainId, clearError: () => setError(null) };
 }

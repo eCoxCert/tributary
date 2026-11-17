@@ -59,7 +59,24 @@
   .l-side { grid-row: 1 / span 4; }
 }
 
-.slip .seg { flex-wrap: nowrap; flex: none; width: auto; }
+.trade .slip .seg { display: inline-flex; grid-template-columns: none; flex-wrap: nowrap; width: auto; flex: none; }
 .slip .seg button { flex: none; min-width: 44px; }
 .repo > div { min-width: 0; }
 .repo-name { display: block; max-width: 100%; }
+
+/* Light theme: the sold part of the illustration needs a visible fill */
+.phase-curve .chart .area { fill: var(--accent-line); opacity: 0.45; }
+/* Footer has three columns */
+@media (min-width: 760px) { .ftr-grid { grid-template-columns: 2fr 1fr 1fr; } }
+/* Definition lists on phones: label on top, text under it, left aligned */
+@media (max-width: 640px) {
+  .kv.fmt > div { display: grid; gap: 2px; }
+  .kv.fmt dd { text-align: left; }
+}
+/* /katki: reference on the left, sticky summary on the right */
+.katki-grid { display: grid; gap: var(--s-5); align-items: start; }
+.katki-grid > * { min-width: 0; }
+@media (min-width: 1000px) {
+  .katki-grid { grid-template-columns: minmax(0, 1fr) 320px; gap: var(--s-7); }
+  .katki-side { position: sticky; top: calc(var(--header-h) + var(--s-5)); }
+}

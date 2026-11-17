@@ -11,6 +11,7 @@ import { encodePacked, keccak256, type Address, type Hex, type PublicClient } fr
 import {
   DFSFactoryClient,
   buildRegisterConfigAndCreateAmmoraV4Launch,
+  createConfigAndPoolWithFirstBuy,
   planCreateAmmoraV4Config,
   type AmmoraV4Config,
   type AmmoraV4Segment,
@@ -19,6 +20,7 @@ import { ADDR, dfsOptions, publicClient } from "./chain";
 import { encodeTributaryMetadata } from "./metadata";
 import { readTemplateConfig } from "./launches";
 import { humanizeError } from "./errors";
+import { estimateFirstBuy } from "./curveMath";
 
 export type CreateInput = {
   owner: Address;
@@ -55,6 +57,23 @@ export function vaultSalt(input: CreateInput): Hex {
   return keccak256(encodePacked(["string"], [`tributary/${input.repo.toLowerCase()}/${input.katkiCommit}/${input.owner.toLowerCase()}/${parts}`]));
 }
 
+/** Template Config with Tributary's overrides. Pure, so it can be tested without a chain. */
+export function composeConfig(t: AmmoraV4Config, owner: Address, vault: Address): AmmoraV4Config {
+  return {
+    ...t,
+    partnerRecipient: vault,
+    creatorShareOfNonProtocolBps: 0,
+    leftoverReceiver: owner,
+    postMigrationCollectFeeMode: 1, // quote token only: the vault pays out WETH
+    liquidityDistribution: { ...t.liquidityDistribution, partner: owner, partnerUnlockedBps: 0, partnerPermanentLockedBps: 10_000, creatorPermanentLockedBps: 0 },
+  };
+}
+
+/** Config and metadata for one launch; the vault named in the metadata is the Config's fee recipient. */
+export function assembleLaunch(input: Pick<CreateInput, "owner" | "repo" | "katkiCommit">, template: AmmoraV4Config, vault: Address) {
+  return { config: composeConfig(template, input.owner, vault), metadataURI: encodeTributaryMetadata({ repo: input.repo, katkiCommit: input.katkiCommit, vault }) };
+}
+
 export async function buildCreatePlan(input: CreateInput, client: PublicClient = publicClient): Promise<CreatePlan> {
   const tpl = await readTemplateConfig(client);
   if (!tpl) throw new Error("The template launch configuration could not be read from the GIWA Sepolia config registry, so the launch cannot be built. Try again in a moment.");
@@ -69,22 +88,7 @@ export async function buildCreatePlan(input: CreateInput, client: PublicClient =
     userSalt: salt,
   });
   const vault = pre.predictedVault;
-  const t = tpl.config;
-  const config: AmmoraV4Config = {
-    ...t,
-    partnerRecipient: vault,
-    creatorShareOfNonProtocolBps: 0,
-    leftoverReceiver: input.owner,
-    postMigrationCollectFeeMode: 1, // quote token only: the vault pays out WETH
-    liquidityDistribution: {
-      ...t.liquidityDistribution,
-      partner: input.owner,
-      partnerUnlockedBps: 0,
-      partnerPermanentLockedBps: 10_000,
-      creatorPermanentLockedBps: 0,
-    },
-  };
-  const metadataURI = encodeTributaryMetadata({ repo: input.repo, katkiCommit: input.katkiCommit, vault });
+  const { config, metadataURI } = assembleLaunch(input, tpl.config, vault);
   const reg = buildRegisterConfigAndCreateAmmoraV4Launch(config, tpl.segments, {
     name: input.name,
     symbol: input.symbol,
@@ -111,10 +115,10 @@ export async function buildCreatePlan(input: CreateInput, client: PublicClient =
   };
 }
 
-export type SimStep = { id: "vault" | "config" | "launch"; label: string; ok: boolean; detail: string; gas?: bigint };
+export type SimStep = { id: "vault" | "config" | "launch" | "firstbuy"; label: string; ok: boolean; detail: string; gas?: bigint };
 
 /** eth_call of the three on-chain steps from `from`. Nothing is sent. */
-export async function simulateCreate(plan: CreatePlan, from: Address, client: PublicClient = publicClient): Promise<SimStep[]> {
+export async function simulateCreate(plan: CreatePlan, from: Address, client: PublicClient = publicClient, firstBuyWei = 0n): Promise<SimStep[]> {
   const out: SimStep[] = [];
   // 1. fee vault
   if (plan.vault.existing) {
@@ -142,9 +146,36 @@ export async function simulateCreate(plan: CreatePlan, from: Address, client: Pu
   try {
     await client.call({ account: from, to: plan.launchTx.to, data: plan.launchTx.data, value: plan.launchTx.value });
     const gas = await client.estimateGas({ account: from, to: plan.launchTx.to, data: plan.launchTx.data, value: plan.launchTx.value }).catch(() => undefined);
-    out.push({ id: "launch", label: "Create the token and its curve", ok: true, detail: "Simulated: config registration and token creation in one call.", gas });
+    out.push({ id: "launch", label: firstBuyWei > 0n ? "Create the token and its curve (simulated without the first buy)" : "Create the token and its curve", ok: true, detail: "Simulated: config registration and token creation in one call.", gas });
   } catch (e) {
     out.push({ id: "launch", label: "Create the token and its curve", ok: false, detail: humanizeError(e) });
   }
+  if (firstBuyWei > 0n) out.push(await simulateFirstBuy(plan, from, firstBuyWei, client));
   return out;
 }
+
+/** The transaction actually sent when the owner buys at launch. It needs WETH, so it is simulated for real only when the wallet already has it. */
+export async function simulateFirstBuy(plan: CreatePlan, from: Address, amount: bigint, client: PublicClient = publicClient): Promise<SimStep> {
+  const label = "Create the token and make the first buy (the transaction that is sent)";
+  try {
+    const minOut = (estimateFirstBuy(plan.segments, amount, plan.config.cliffFeeBps) * 99n) / 100n;
+    const p = await createConfigAndPoolWithFirstBuy(client, {
+      account: from,
+      config: plan.config,
+      segments: plan.segments,
+      launch: { name: plan.input.name, symbol: plan.input.symbol, metadataURI: plan.metadataURI, creatorMetadataURI: plan.metadataURI, tokenDecimals: plan.config.tokenDecimals },
+      firstBuys: [{ includedQuoteAmountRaw: amount, minimumBaseAmountOutRaw: minOut, allowPartialFill: false, recipient: from }],
+      deadline: BigInt(Math.floor(Date.now() / 1000) + 600),
+      gas: { maxFeePerGasNativeRaw: (await client.getGasPrice()) * 2n, safetyMarginBps: 2000n },
+      blockNumber: await client.getBlockNumber(),
+    });
+    if (p.status === "APPROVAL_REQUIRED") return { id: "firstbuy", label, ok: true, detail: "This wallet has the WETH but has not approved it yet. The approval comes first, then this call is simulated again before it is sent." };
+    await client.call({ account: from, to: p.transaction.to, data: p.transaction.data, value: p.transaction.value });
+    return { id: "firstbuy", label, ok: true, detail: "Simulated with your WETH balance and allowance." };
+  } catch (e) {
+    const m = (e as Error).message ?? "";
+    if (/Quote balance is below/i.test(m)) return { id: "firstbuy", label, ok: true, detail: "Not simulated yet: this wallet holds less WETH than the first buy. The app wraps ETH first, then simulates this call right before it is sent. If that simulation fails, nothing is sent." };
+    return { id: "firstbuy", label, ok: false, detail: humanizeError(e) };
+  }
+}
+

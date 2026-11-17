@@ -1,3 +1,4 @@
+import { useTitle } from "../hooks/useTitle";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
@@ -40,6 +41,7 @@ export function Create() {
   const { data: wallet } = useWalletClient();
   const qc = useQueryClient();
   const loc = useLocation();
+  useTitle("Launch a repo");
   const tpl = useTemplate();
 
   const [repo, setRepo] = useState("");
@@ -54,6 +56,7 @@ export function Create() {
   const [simError, setSimError] = useState<string | null>(null);
   const [steps, setSteps] = useState<ProgressStep[] | null>(null);
   const [runErr, setRunErr] = useState<string | null>(null);
+  const [sentLaunchTx, setSentLaunchTx] = useState<`0x${string}` | null>(null);
   const [launched, setLaunched] = useState<{ token: Address; curve: Address; hash: `0x${string}`; block: bigint; vault: Address } | null>(null);
   const reviewRef = useRef<HTMLElement>(null);
 
@@ -86,7 +89,7 @@ export function Create() {
   }, [loc.hash]);
 
   /* Simulate as soon as the review is open and a wallet is connected. */
-  const simKey = `${found?.sha}|${w.address}|${name}|${symbol}`;
+  const simKey = `${found?.sha}|${w.address}|${name}|${symbol}|${firstBuy}`;
   useEffect(() => {
     if (phase !== "review" || !found || !selection?.ok || w.status !== "connected" || !w.address) return;
     let live = true;
@@ -103,7 +106,7 @@ export function Create() {
           name: name.trim(),
           symbol: symbol.toUpperCase(),
         });
-        const s = await simulateCreate(p, w.address as Address);
+        const s = await simulateCreate(p, w.address as Address, undefined, firstBuyWei && firstBuyWei > 0n ? firstBuyWei : 0n);
         if (live) {
           setPlan(p);
           setSims(s);
@@ -213,7 +216,13 @@ export function Create() {
         receipt = r.receipt;
         hash = r.hash;
       }
-      const parsed = parseAmmoraV4LaunchCreatedReceipt(receipt, ADDR.factory);
+      setSentLaunchTx(hash);
+      let parsed;
+      try {
+        parsed = parseAmmoraV4LaunchCreatedReceipt(receipt, ADDR.factory);
+      } catch {
+        throw new Error(`The launch transaction ${hash} confirmed, but its receipt could not be read here. Do not launch again: open the transaction in the explorer to find your token. ${explorerTx(hash)}`);
+      }
       mark("launch", "done");
       setLaunched({ token: parsed.token, curve: parsed.curve, hash, block: receipt.blockNumber, vault: vaultAddr });
       setPhase("done");
@@ -282,8 +291,9 @@ export function Create() {
                   </p>
                 )}
               </form>
+              <p className="hint">Try <button type="button" className="link" onClick={() => { setRepo("octocat/Hello-World"); void read("octocat/Hello-World"); }}>octocat/Hello-World</button>, a real public repository. It has no <span className="mono">.katki.json</span>, so it shows the "missing file" guide, not a launch.</p>
               {(phase === "empty" || result?.stage === "error") && (
-                <dl className="kv reads">
+                <dl className="kv reads fmt">
                   <div><dt>Tributary reads</dt><dd><span className="mono">.katki.json</span> at the root of the default branch</dd></div>
                   <div><dt>It records</dt><dd>the commit hash the file was read at</dd></div>
                   <div><dt>It weighs</dt><dd>each listed person by their GitHub commit count</dd></div>
@@ -455,11 +465,26 @@ export function Create() {
                     {tpl.data && <div><dt>Supply</dt><dd>{fmt.compact(Number(tpl.data.supply) / 10 ** tpl.data.tokenDecimals)}, of which {fmt.compact(tpl.data.totalBase / 10 ** tpl.data.tokenDecimals)} on the curve</dd></div>}
                     <div><dt>Contributor allocation</dt><dd>{firstBuyWei && firstBuyWei > 0n ? `${fmt.eth(firstBuyWei)} ETH first buy, then ${selection.included.length} transfers` : "None"}</dd></div>
                     {feePct !== null && <div><dt>Trading fee</dt><dd>{fmt.pct(feePct, feePct % 1 ? 2 : 0)} of each trade, {fmt.pct(100 - protocolPct, 0)} of it to the fee vault</dd></div>}
-                    {tpl.data && <div><dt>Graduates at</dt><dd>{fmt.eth(tpl.data.graduationWei, 2)} ETH raised</dd></div>}
+                    {tpl.data && <div><dt>Graduates at</dt><dd>{fmt.eth(tpl.data.graduationWei)} ETH raised</dd></div>}
                     <div><dt>Fee vault owner</dt><dd>{w.address ? <span className="mono">{fmt.short(w.address)}</span> : "The wallet you connect"}</dd></div>
                     <div><dt>Network</dt><dd>GIWA Sepolia</dd></div>
                     {sims && gasPrice.data !== undefined && <div><dt>Estimated gas</dt><dd>{fmt.eth(gasUnits * gasPrice.data, 5)} ETH, {fmt.compact(Number(gasUnits))} gas units</dd></div>}
                   </dl>
+                  <div className="panel" style={{ marginTop: 16 }}>
+                    <table className="ledger stack">
+                      <thead><tr><th>Fee recipient (full address)</th><th className="r">Basis points</th><th className="r">Share</th></tr></thead>
+                      <tbody>
+                        {selection.included.map((c) => (
+                          <tr key={c.wallet}>
+                            <td className="full"><b>{c.github}</b> <span className="mono">{c.wallet}</span></td>
+                            <td data-k="Basis points" className="r">{c.bps}</td>
+                            <td data-k="Share" className="r r-m">{fmt.bpsPct(c.bps, 2)}</td>
+                          </tr>
+                        ))}
+                        <tr className="is-total"><td className="full"><b>Total</b></td><td data-k="Basis points" className="r"><b>{selection.included.reduce((a, c) => a + c.bps, 0)}</b></td><td data-k="Share" className="r r-m"><b>100.00%</b></td></tr>
+                      </tbody>
+                    </table>
+                  </div>
                   <div className="pick" style={{ marginTop: 12 }}>
                     <span><b>Who can change what.</b> You own the fee vault and are the launch creator. The recipient list and shares are fixed in the vault when it is created. After graduation, trading fees go to liquidity positions held by your wallet and reach the vault only when you add them.</span>
                     <span>Your recorded commit is <span className="mono">{found.sha.slice(0, 7)}</span>; the launch metadata names this repository, commit and vault.</span>
@@ -487,8 +512,8 @@ export function Create() {
                 <div className="confirm-bar">
                   <p>The split is written into the fee vault and the launch configuration. Neither can be changed after the transactions confirm.</p>
                   {phase !== "done" && w.status === "connected" && (
-                    <button className="btn btn-primary btn-lg" type="button" onClick={launch} disabled={phase === "running" || !simsOk || simBusy || !wallet}>
-                      {phase === "running" ? <><Spinner />Confirm in your wallet</> : `Launch ${symbol.toUpperCase() || "token"}`}
+                    <button className="btn btn-primary btn-lg" type="button" onClick={launch} disabled={phase === "running" || !simsOk || simBusy || !wallet || !!sentLaunchTx}>
+                      {sentLaunchTx ? "Launch sent" : phase === "running" ? <><Spinner />Confirm in your wallet</> : `Launch ${symbol.toUpperCase() || "token"}`}
                     </button>
                   )}
                   {phase !== "done" && w.status === "disconnected" && <button className="btn btn-ink btn-lg" type="button" onClick={w.connect}>Connect wallet</button>}
@@ -515,6 +540,8 @@ export function Create() {
                     info={katkiInfoForPanel}
                     alloc={doneAlloc.data as AllocationRead | undefined}
                     loading={doneAlloc.isPending}
+                    refreshing={doneAlloc.isFetching}
+                    rec={{ txHash: launched.hash, block: launched.block, curve: launched.curve }}
                     error={doneAlloc.isError ? "The allocation could not be read yet. Open the launch page in a moment." : null}
                   />
                 )}

@@ -1,3 +1,4 @@
+import { useTitle } from "../hooks/useTitle";
 import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Banner, SkeletonRows } from "../components/ui";
@@ -12,6 +13,7 @@ const PAGE = 25;
 export function Explore() {
   const [sp] = useSearchParams();
   const debug = sp.get("all") === "1";
+  useTitle("Launches");
   const d = useDiscovery(debug);
   const [filter, setFilter] = useState<Filter>("all");
   const [term, setTerm] = useState("");
@@ -27,6 +29,7 @@ export function Explore() {
     const t = term.trim().toLowerCase();
     const items = recs.map((rec, i) => ({ rec, q: queries[i]!, card: cards[i] }));
     const filtered = items.filter((it) => {
+      if (!debug && it.card?.verified && !it.card.verified.ok) return false; // chain does not back the Tributary claim
       if (filter !== "all" && it.card) {
         const s = statusOf(it.card);
         if (filter === "grad" ? s !== "grad" : s === "grad") return false;
@@ -49,7 +52,7 @@ export function Explore() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recs.map((r) => r.curve).join(), queries.map((q) => q.dataUpdatedAt).join(), filter, term, sort]);
 
-  const allRead = recs.length > 0 && loaded.length === recs.length;
+  const allRead = !d.scanning && loaded.length === recs.length;
   const live = loaded.filter((c) => statusOf(c) !== "grad").length;
   const grad = loaded.filter((c) => statusOf(c) === "grad").length;
   const people = loaded.reduce((a, c) => a + (c.vault?.recipients.length ?? 0), 0);
@@ -109,10 +112,10 @@ export function Explore() {
               <h3>{debug ? "No launches found in the scanned blocks" : "No Tributary launches yet"}</h3>
               <p>
                 {debug
-                  ? "The factory emitted no LaunchCreated events in the scanned range. Scan further back below."
+                  ? "The factory emitted no LaunchCreated events in the scanned range. Look further back below."
                   : "A launch appears here once someone creates one from a repository with a .katki.json. Be the first."}
               </p>
-              {!debug && <Link className="btn btn-sm btn-primary" to="/create">Launch your repo</Link>}
+              {!debug && <Link className="btn btn-sm" to="/create">Launch your repo</Link>}
             </div>
           ) : (
             <>
@@ -137,11 +140,10 @@ export function Explore() {
           )}
         </div>
 
-        <p className="hint" id="count" style={{ marginTop: 12 }}>
+        <p className="hint" id="count" style={{ marginTop: 12 }} title={d.scannedFrom !== null ? `Blocks ${d.scannedFrom} to ${d.head}` : undefined}>
           {d.scanning && recs.length === 0
             ? "Reading launches from GIWA Sepolia…"
-            : `Showing ${view.length} of ${d.launches.length} launches.`}
-          {d.source === "chain" && scannedDays !== null ? ` Scanned the last ${scannedDays.toFixed(1)} days of blocks (${d.scannedFrom?.toString()} to ${d.head?.toString()}).` : ""}
+            : `Showing ${view.length} of ${d.launches.length} launches${d.source === "chain" && scannedDays !== null ? ` from the last ${scannedDays.toFixed(1)} days` : ""}.`}
           {d.source === "data-api" ? " Source: Ammora Data API." : ""}
           {d.scanning && recs.length > 0 ? " Still scanning…" : ""}
         </p>

@@ -14,6 +14,8 @@ export type CurveChartProps = {
   height?: number;
   pad?: { l: number; r: number; t: number; b: number };
   lead?: number; // flat lead-in in px (landing phase curve)
+  /** Scale the price axis to the price at this fraction of the curve (the rest is clipped), so an early stage reads as a visible climb. */
+  yClip?: number;
   grid?: boolean;
   hover?: boolean;
   animate?: boolean;
@@ -57,7 +59,7 @@ export function CurveChart(p: CurveChartProps) {
   const y1 = pad.t;
   const pts = p.points;
   const hp = (raw: number) => humanPrice(raw, p.baseDecimals, qd);
-  const maxPrice = pts.length ? hp(pts[pts.length - 1]!.price) : 1;
+  const maxPrice = pts.length ? hp(p.yClip ? interpolate(pts, p.yClip, p.totalBase).price : pts[pts.length - 1]!.price) : 1;
   const pmax = maxPrice * 1.08;
   const X = (f: number) => x0 + f * (x1 - x0);
   const Y = (price: number) => y0 - (price / pmax) * (y0 - y1);
@@ -99,6 +101,7 @@ export function CurveChart(p: CurveChartProps) {
     <div className="chart" ref={hostRef}>
       <svg viewBox={`0 0 ${Wd} ${H}`} width={Wd} height={H} role="img" aria-label={p.ariaLabel} onPointerMove={onMove} onPointerLeave={() => setTip(null)}>
         <defs>
+          <clipPath id={`${hatchId}c`}><rect x={0} y={y1 - 14} width={Wd} height={y0 - y1 + 14} /></clipPath>
           <pattern id={hatchId} width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
             <rect width="6" height="6" fill="var(--accent-wash)" />
             <line x1="0" y1="0" x2="0" y2="6" className="hatch-line" />
@@ -126,11 +129,11 @@ export function CurveChart(p: CurveChartProps) {
             </g>
           </>
         )}
-        {now !== undefined && now > 0 && <path d={line(0, now, true)} className="area" />}
-        {win > 0 && <path d={line(0, Math.min(win, now ?? win), true)} className="area-window" style={{ fill: `url(#${hatchId})` }} />}
+        {now !== undefined && now > 0 && <path d={line(0, now, true)} className="area" clipPath={`url(#${hatchId}c)`} />}
+        {win > 0 && <path d={line(0, Math.min(win, now ?? win), true)} className="area-window" style={{ fill: `url(#${hatchId})` }} clipPath={`url(#${hatchId}c)`} />}
         {p.lead ? <line x1={pad.l} x2={x0} y1={y0 - 0.5} y2={y0 - 0.5} className="curve" /> : null}
-        <path d={line(now ?? 0, 1, false)} className="curve-ahead" />
-        <path ref={doneRef} d={line(0, now ?? 1, false)} className="curve" />
+        <path d={line(now ?? 0, 1, false)} className="curve-ahead" clipPath={`url(#${hatchId}c)`} />
+        <path ref={doneRef} d={line(0, now ?? 1, false)} className="curve" clipPath={`url(#${hatchId}c)`} />
         <line x1={gx} x2={gx} y1={y1 - 12} y2={y0} className="grad-line" />
         <text x={gx - 6} y={y1 - 2} textAnchor="end" className="lbl">
           {p.gradLabel}

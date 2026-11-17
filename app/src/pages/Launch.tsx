@@ -12,6 +12,8 @@ import { curveTotals, humanPrice, positionAt, rawPrice, sampleCurve } from "../l
 import { fmt } from "../lib/format";
 import { humanizeError } from "../lib/errors";
 import { AMMORA_PROTOCOL_TRADING_FEE_SHARE_BPS } from "@ammora-protocol/sdk";
+import { verifyTributaryLaunch, type Verification } from "../lib/verify";
+import { useTitle } from "../hooks/useTitle";
 
 export function Launch() {
   const { token } = useParams();
@@ -20,13 +22,27 @@ export function Launch() {
   const q = useLaunch(token);
   const data = q.data;
   const meta = data?.meta ?? null;
-  const tributary = !!meta;
-  const needRec = tributary || debug; // creation record gives the launch date and the first buy
+  const needRec = !!meta || debug; // creation record gives the launch date and the first buy
   const rec = useLaunchRecord(token, !!data && needRec);
   const launchedAt = useBlockTime(rec.data?.block);
   const vault = useVault(meta?.vault);
   const info = useKatkiInfo(meta);
+  const verification: Verification | null = useMemo(() => {
+    if (!meta || !data) return null;
+    if (vault.isPending) return null;
+    return verifyTributaryLaunch({
+      metaVault: meta.vault,
+      partnerRecipient: data.snap.config.partnerRecipient,
+      creatorShareOfNonProtocolBps: data.snap.config.creatorShareOfNonProtocolBps,
+      creator: data.snap.state.creator,
+      vault: vault.data ? { owner: vault.data.owner, recipients: vault.data.recipients.map((r) => ({ recipient: r.recipient, share: r.share })) } : null,
+      listedWallets: info.data?.file ? info.data.file.contributors.map((c) => c.wallet) : null,
+    });
+  }, [meta, data, vault.data, vault.isPending, info.data]);
+  const tributary = !!meta && verification?.ok === true;
+  const mismatch = !!meta && verification !== null && !verification.ok;
   const alloc = useAllocation(tributary ? rec.data : null, data?.snap.state.creator, data?.curve);
+  useTitle(data ? `${data.snap.name} (${data.snap.symbol})` : "Launch");
 
   const geometry = useMemo(() => {
     if (!data) return null;
@@ -62,7 +78,7 @@ export function Launch() {
   }
   if (!data || !geometry) return <LaunchSkeleton />;
 
-  if (!tributary && !debug) {
+  if (!tributary && !mismatch && !debug && !(meta && verification === null)) {
     return (
       <main className="page">
         <div className="wrap">
@@ -94,7 +110,16 @@ export function Launch() {
       <div className="wrap">
         <Crumbs name={title} />
 
-        {debug && !tributary && (
+        {mismatch && verification && !verification.ok && (
+          <div style={{ marginBottom: 24 }}>
+            <Banner kind="warn">
+              <b>This launch does not follow Tributary's rules.</b> Its metadata names a repository and a fee vault, but the chain does not back that up, so Tributary shows no contributors, split or fee claims for it.
+              <ul className="err-list" style={{ marginTop: 8 }}>{verification.problems.map((x, i) => <li key={i}>{x}</li>)}</ul>
+              Price, curve and quotes below are real.
+            </Banner>
+          </div>
+        )}
+        {debug && !tributary && !mismatch && (
           <div style={{ marginBottom: 24 }}>
             <Banner kind="warn">Debug view. This launch was not made with Tributary: it has no repository, fee vault or contributor split. Price, curve and quotes are real.</Banner>
           </div>
@@ -109,7 +134,7 @@ export function Launch() {
             <StatusTag status={st} />
           </div>
           <div className="l-meta">
-            {meta && (
+            {tributary && meta && (
               <a href={`https://github.com/${meta.repo}`} target="_blank" rel="noreferrer">
                 <IconGithub />
                 {meta.repo}
@@ -125,11 +150,10 @@ export function Launch() {
           </div>
           <div className="price-row">
             <span className="price-big">{fmt.gwei(geometry.price)}</span>
-            <span className={`${geometry.change >= 0 ? "pos" : "neg"} num`}>
-              {geometry.change >= 0 ? "+" : ""}
-              {fmt.pct(geometry.change)} since launch
+            <span className={`${Math.abs(geometry.change) < 0.05 ? "faint" : geometry.change > 0 ? "pos" : "neg"} num`}>
+              {Math.abs(geometry.change) < 0.05 ? "0.0%" : `${geometry.change > 0 ? "+" : ""}${fmt.pct(geometry.change)}`} since launch
             </span>
-            <span className="faint num">Market cap {fmt.ethNum(geometry.price * (Number(snap.totalSupply) / 10 ** snap.decimals), 2)} ETH</span>
+            <span className="faint num">Market cap {fmt.ethNum(geometry.price * (Number(snap.totalSupply) / 10 ** snap.decimals), 4)} ETH</span>
           </div>
         </header>
 
@@ -149,7 +173,7 @@ export function Launch() {
                 baseDecimals={snap.decimals}
                 nowBase={snap.state.status === 3 ? geometry.totalBase : geometry.nowBase}
                 windowBase={firstBuyBase}
-                gradLabel={`Graduates at ${fmt.eth(snap.state.migrationQuoteThreshold, 2)} ETH raised`}
+                gradLabel={`Graduates at ${fmt.eth(snap.state.migrationQuoteThreshold)} ETH raised`}
                 nowLabel={fmt.gwei(geometry.price)}
                 ariaLabel={`${snap.symbol} bonding curve. ${Math.round(snap.progress.progressBps / 100)}% of the graduation target raised.`}
                 pad={{ l: 0, r: 4, t: 26, b: 26 }}
@@ -159,7 +183,7 @@ export function Launch() {
               />
             </div>
             <dl className="curve-stats">
-              <div><dt>Raised</dt><dd>{fmt.eth(snap.progress.current)} of {fmt.eth(snap.progress.target, 2)} ETH</dd></div>
+              <div><dt>Raised</dt><dd>{fmt.eth(snap.progress.current)} of {fmt.eth(snap.progress.target)} ETH</dd></div>
               <div><dt>Sold on curve</dt><dd>{fmt.compact(sold)} of {fmt.compact(geometry.totalTokens)}</dd></div>
               <div><dt>To graduation</dt><dd>{snap.state.status === 3 ? "In pool" : `${fmt.eth(snap.progress.target > snap.progress.current ? snap.progress.target - snap.progress.current : 0n)} ETH`}</dd></div>
               <div><dt>Trading fee</dt><dd>{fmt.pct(feeBps / 100, feeBps % 100 ? 2 : 0)}</dd></div>
@@ -167,7 +191,7 @@ export function Launch() {
           </section>
 
           <aside className="l-side" aria-label="Trade">
-            <TradePanel data={data} recipients={vault.data ? vault.data.recipients.length : null} />
+            <TradePanel data={data} recipients={tributary && vault.data ? vault.data.recipients.length : null} />
             {tributary && (
               <section className="panel">
                 <div className="panel-hd"><h2>Where the fee goes</h2></div>
@@ -180,7 +204,7 @@ export function Launch() {
             )}
           </aside>
 
-          {tributary && meta && (
+          {(tributary || (!!meta && verification === null)) && meta && (
             <>
               {vault.isPending ? (
                 <section className="panel a-contrib"><div className="panel-hd"><h2>Contributors and fees</h2></div><table className="ledger stack contrib"><tbody><tr><td className="full"><Sk w="60%" /></td></tr><tr><td className="full"><Sk w="50%" /></td></tr><tr><td className="full"><Sk w="55%" /></td></tr></tbody></table></section>
@@ -198,6 +222,8 @@ export function Launch() {
                     info={info.data}
                     alloc={alloc.data}
                     loading={rec.isPending || alloc.isPending}
+                    refreshing={alloc.isFetching}
+                    rec={rec.data ? { txHash: rec.data.txHash, block: rec.data.block, curve: data.curve } : null}
                     error={rec.isError || alloc.isError ? "The launch transaction or the token transfers could not be read right now." : rec.isSuccess && !rec.data ? "The launch creation record was not found in the last 600,000 blocks, so the allocation cannot be shown." : null}
                   />
                 </>

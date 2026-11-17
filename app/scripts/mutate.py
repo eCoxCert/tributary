@@ -19,6 +19,13 @@ M = [
     ("src/lib/allocation.ts", "parts[largest] = (parts[largest] as bigint) + rest;", "", "allocation remainder lost"),
     ("src/lib/github.ts", 'if (remaining === "0" || res.status === 429) {', "if (false) {", "rate limit not detected"),
     ("src/lib/curveMath.ts", "return { base: L * (1 / a - 1 / b), quote: (L * (b - a)) / Q128 };", "return { base: L * (1 / a - 1 / b), quote: (L * (b - a)) / Q64 };", "wrong quote scale"),
+    ("src/lib/create.ts", "partnerRecipient: vault,", "partnerRecipient: owner,", "fee recipient not the vault"),
+    ("src/lib/create.ts", "creatorShareOfNonProtocolBps: 0,", "creatorShareOfNonProtocolBps: 3000,", "creator takes fee share"),
+    ("src/lib/create.ts", "katkiCommit: input.katkiCommit, vault })", "katkiCommit: input.katkiCommit, vault: input.owner })", "metadata vault differs from Config"),
+    ("src/lib/verify.ts", "if (!eq(i.partnerRecipient, i.metaVault))", "if (false)", "fake launch: partner not checked"),
+    ("src/lib/verify.ts", "if (i.creatorShareOfNonProtocolBps !== 0)", "if (false)", "fake launch: creator share not checked"),
+    ("src/lib/verify.ts", "if (!eq(i.vault.owner, i.creator))", "if (false)", "fake launch: vault owner not checked"),
+    ("src/lib/allocation.ts", "if (rem <= 0n) {", "if (false) {", "double send after partial failure"),
 ]
 bad = 0
 for path, old, new, what in M:
