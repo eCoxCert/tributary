@@ -239,6 +239,7 @@ async function main() {
     log(`  collectFeeMode=${c.collectFeeMode} (0 QuoteToken,1 OutputToken) poolCreationFee=${c.poolCreationFee} tokenDecimals=${c.tokenDecimals}`);
     log(`  migrationMode=${c.migrationMode} liquidityDistribution.partner=${c.liquidityDistribution.partner}`);
     log(`  liquidityDistribution bps: partnerUnlocked=${c.liquidityDistribution.partnerUnlockedBps} partnerPermLocked=${c.liquidityDistribution.partnerPermanentLockedBps} creatorPermLocked=${c.liquidityDistribution.creatorPermanentLockedBps}`);
+    log(`  postMigrationCollectFeeMode=${c.postMigrationCollectFeeMode} (0 BothTokens,1 QuoteTokenOnly) postMigrationFeeBps=${c.postMigrationFeeBps} compoundingFeeBps=${c.postMigrationCompoundingFeeBps}`);
     log(`  activationDelay=${c.activationDelay} activationType=${c.activationType} segments=${snap.segments.length}`);
     const prev = previewAmmoraLaunchFeeDistribution(10_000n, c.creatorShareOfNonProtocolBps, false);
     log(`  ornek: 10000 birim ucret -> ${json(prev)}`);
@@ -341,6 +342,10 @@ async function main() {
       const plan = await planCreateAmmoraV4Config(client, REGISTRY, edited, cfg.segments, sender, sender);
       log(`  SONUC: simulasyon basarili: expectedConfigId=${plan.expectedConfigId} simulatedConfigId=${plan.simulatedConfigId} hash=${plan.simulatedConfigHash}`);
       log(`  tx.to=${plan.transaction.to} data=${(plan.transaction.data.length - 2) / 2} bayt`);
+      const gas = await client
+        .estimateGas({ account: sender, to: plan.transaction.to, data: plan.transaction.data })
+        .catch((e) => `tahmin yok: ${errMsg(e)}`);
+      log(`  createConfig gas tahmini: ${gas}`);
     } catch (e) {
       log(`  SONUC: revert/hata -> ${errMsg(e)}`);
     }
