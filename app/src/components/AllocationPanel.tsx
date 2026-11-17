@@ -5,7 +5,6 @@ import type { Address } from "viem";
 import { Av, Banner, Spinner, StepList, type ProgressStep } from "./ui";
 import { useWallet } from "../hooks/useWallet";
 import type { KatkiInfo } from "../hooks/useLaunch";
-import type { VaultSnapshot } from "../lib/launches";
 import type { AllocationRead } from "../lib/allocation";
 import { runDistribution, readAllocation, splitByShares } from "../lib/allocation";
 import { explorerTx, publicClient } from "../lib/chain";
@@ -15,10 +14,12 @@ import { tokenBalance, transferToken } from "../lib/tx";
 
 export type AllocRow = { wallet: Address; github: string | null; due: bigint; sent: bigint };
 
-export function allocationRows(vault: VaultSnapshot, info: KatkiInfo | undefined, alloc: AllocationRead): AllocRow[] {
+export type AllocRecipient = { recipient: Address; share: bigint };
+
+export function allocationRows(recipients: readonly AllocRecipient[], info: KatkiInfo | undefined, alloc: AllocationRead): AllocRow[] {
   const handleOf = new Map<string, string>((info?.file?.contributors ?? []).map((c) => [c.wallet.toLowerCase(), c.github]));
-  const dues = alloc.firstBuy > 0n ? splitByShares(alloc.firstBuy, vault.recipients.map((r) => r.share)) : vault.recipients.map(() => 0n);
-  return vault.recipients.map((r, i) => ({
+  const dues = alloc.firstBuy > 0n ? splitByShares(alloc.firstBuy, recipients.map((r) => r.share)) : recipients.map(() => 0n);
+  return recipients.map((r, i) => ({
     wallet: r.recipient,
     github: handleOf.get(r.recipient.toLowerCase()) ?? null,
     due: dues[i] as bigint,
@@ -31,7 +32,8 @@ export function AllocationPanel(p: {
   symbol: string;
   decimals: number;
   creator: Address;
-  vault: VaultSnapshot;
+  /** Who the fee goes to: the vault's recipients, or the one wallet. Shares are weights. */
+  recipients: readonly AllocRecipient[];
   info: KatkiInfo | undefined;
   alloc: AllocationRead | undefined;
   loading: boolean;
@@ -54,7 +56,7 @@ export function AllocationPanel(p: {
     queryFn: () => tokenBalance(publicClient, p.token, p.creator),
   });
 
-  const rows = p.alloc ? allocationRows(p.vault, p.info, p.alloc) : [];
+  const rows = p.alloc ? allocationRows(p.recipients, p.info, p.alloc) : [];
   const pending = rows.filter((r) => r.sent < r.due);
   const sentCount = rows.filter((r) => r.due > 0n && r.sent >= r.due).length;
   const dueCount = rows.filter((r) => r.due > 0n).length;
@@ -75,7 +77,7 @@ export function AllocationPanel(p: {
     let current = "";
     try {
       const fresh = await readAllocation({ token: p.token, curve: rec.curve, creator: p.creator, txHash: rec.txHash, block: rec.block });
-      const dues = new Map(allocationRows(p.vault, p.info, fresh).map((r) => [r.wallet.toLowerCase(), r.due]));
+      const dues = new Map(allocationRows(p.recipients, p.info, fresh).map((r) => [r.wallet.toLowerCase(), r.due]));
       await runDistribution({
         items: pending.map((r) => ({ wallet: r.wallet, due: dues.get(r.wallet.toLowerCase()) ?? r.due })),
         // re-read on chain before every transfer: never pay a wallet twice

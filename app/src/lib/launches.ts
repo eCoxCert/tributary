@@ -278,6 +278,15 @@ export async function readVaultSnapshot(vault: Address, client: PublicClient = p
   };
 }
 
+/** A launch whose fee goes straight to one wallet: nothing to read but what is waiting in the launch fee store. */
+export type DirectSnapshot = { recipient: Address; feeVault: Address; pending: bigint };
+
+export async function readDirectSnapshot(recipient: Address, client: PublicClient = publicClient): Promise<DirectSnapshot> {
+  const feeVault = (await client.readContract({ address: ADDR.factory, abi: ammoraLaunchFactoryV4Abi, functionName: "feeVault" })) as Address;
+  const pending = (await client.readContract({ address: feeVault, abi: feeVaultAbi, functionName: "claimable", args: [ADDR.weth, recipient] })) as bigint;
+  return { recipient, feeVault, pending };
+}
+
 /** Reads the template Config used for every Tributary launch. null when it cannot be read (nothing is guessed). */
 export async function readTemplateConfig(client: PublicClient = publicClient, id: bigint = TEMPLATE_CONFIG_ID) {
   try {

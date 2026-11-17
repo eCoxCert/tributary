@@ -117,7 +117,12 @@ export function missingFromFile(file: KatkiFile, history: readonly RepoContribut
 }
 
 /** Template shown when the repo has no file: logins from history, wallets left empty. */
-export function templateFor(history: readonly RepoContributor[], limit = 4): string {
-  const rows = history.slice(0, limit).map((h) => ({ github: h.login, wallet: WALLET_PLACEHOLDER }));
+export function templateFor(history: readonly RepoContributor[], limit = 4, mine?: { github: string; wallet: string }): string {
+  const rows = history.slice(0, limit).map((h) => ({ github: h.login, wallet: mine && mine.github.toLowerCase() === h.login.toLowerCase() ? mine.wallet : WALLET_PLACEHOLDER }));
   return JSON.stringify({ version: 1, contributors: rows.length ? rows : [{ github: "your-handle", wallet: WALLET_PLACEHOLDER }] }, null, 2);
+}
+
+/** GitHub's "create new file" page with the name and content already filled in (opens in a new tab). */
+export function githubNewFileUrl(ref: { owner: string; name: string }, branch: string, json: string): string {
+  return `https://github.com/${ref.owner}/${ref.name}/new/${encodeURIComponent(branch)}?filename=.katki.json&value=${encodeURIComponent(json)}`;
 }

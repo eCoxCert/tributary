@@ -7,12 +7,13 @@ import type { Address } from "viem";
 import { DFSClient, createConfigAndPoolWithFirstBuy, parseAmmoraV4LaunchCreatedReceipt } from "@ammora-protocol/sdk";
 import { Av, Banner, CopyButton, IconErr, IconOk, Spinner, StepList, type ProgressStep } from "../components/ui";
 import { AllocationPanel } from "../components/AllocationPanel";
+import { MissingGuide } from "../components/MissingGuide";
 import { useWallet } from "../hooks/useWallet";
 import { useTemplate } from "../hooks/useChainData";
 import { readRepository, type ReadResult } from "../lib/readRepo";
 import { fmt, parseAmount } from "../lib/format";
 import { humanizeError } from "../lib/errors";
-import { buildCreatePlan, simulateCreate, type CreatePlan, type SimStep } from "../lib/create";
+import { buildCreatePlan, createStepIds, simulateCreate, type CreatePlan, type SimStep } from "../lib/create";
 import { ADDR, dfsOptions, explorerAddress, explorerTx, publicClient } from "../lib/chain";
 import { allowanceOf, approveToken, sendCalldata, wethBalance, wrapEth } from "../lib/tx";
 import { estimateFirstBuy } from "../lib/curveMath";
@@ -57,7 +58,7 @@ export function Create() {
   const [steps, setSteps] = useState<ProgressStep[] | null>(null);
   const [runErr, setRunErr] = useState<string | null>(null);
   const [sentLaunchTx, setSentLaunchTx] = useState<`0x${string}` | null>(null);
-  const [launched, setLaunched] = useState<{ token: Address; curve: Address; hash: `0x${string}`; block: bigint; vault: Address } | null>(null);
+  const [launched, setLaunched] = useState<{ token: Address; curve: Address; hash: `0x${string}`; block: bigint; vault: Address | null } | null>(null);
   const reviewRef = useRef<HTMLElement>(null);
 
   const found = result?.stage === "found" ? result : null;
@@ -134,12 +135,19 @@ export function Create() {
     setPhase("running");
     setRunErr(null);
     const hasBuy = !!firstBuyWei && firstBuyWei > 0n;
-    let list: ProgressStep[] = [
-      { id: "vault", label: "Create the fee vault", state: plan.vault.existing ? "skipped" : "todo", note: plan.vault.existing ? "A vault with these recipients already exists" : undefined },
-      { id: "source", label: "Let the vault pull fees from the launch fee store", state: "todo" },
-      ...(hasBuy ? [{ id: "wrap", label: "Wrap ETH for the first buy", state: "todo" as const }, { id: "approve", label: "Approve WETH for the first buy", state: "todo" as const }] : []),
-      { id: "launch", label: hasBuy ? "Create the token and make the first buy" : "Create the token and its curve", state: "todo" },
-    ];
+    const labels: Record<string, string> = {
+      vault: "Create the fee vault",
+      source: "Let the vault pull fees from the launch fee store",
+      wrap: "Wrap ETH for the first buy",
+      approve: "Approve WETH for the first buy",
+      launch: hasBuy ? "Create the token and make the first buy" : "Create the token and its curve",
+    };
+    let list: ProgressStep[] = createStepIds(plan.mode, hasBuy).map((id) => ({
+      id,
+      label: labels[id] as string,
+      state: id === "vault" && plan.vault?.existing ? ("skipped" as const) : ("todo" as const),
+      note: id === "vault" && plan.vault?.existing ? "A vault with these recipients already exists" : undefined,
+    }));
     setSteps(list);
     let current = "";
     const mark = (id: string, state: ProgressStep["state"], note?: string) => {
@@ -147,25 +155,28 @@ export function Create() {
       setSteps(list);
     };
     try {
-      // 1. vault
-      if (!plan.vault.existing) {
-        current = "vault";
-        mark("vault", "active", "Confirm in your wallet");
-        await sendCalldata(wallet, publicClient, owner, plan.vault.tx);
-        mark("vault", "done");
+      let vaultAddr: Address | null = null;
+      if (plan.vault) {
+        // 1. vault
+        if (!plan.vault.existing) {
+          current = "vault";
+          mark("vault", "active", "Confirm in your wallet");
+          await sendCalldata(wallet, publicClient, owner, plan.vault.tx);
+          mark("vault", "done");
+        }
+        // 2. claim source
+        current = "source";
+        mark("source", "active");
+        vaultAddr = plan.vault.predicted;
+        const dfs = new DFSClient(publicClient, vaultAddr, dfsOptions);
+        const snap: VaultSnapshot = await readVaultSnapshot(vaultAddr);
+        if (!snap.claimSourceEnabled) {
+          mark("source", "active", "Confirm in your wallet");
+          const tx = await dfs.planSetClaimSource({ source: snap.feeVault, allowed: true, caller: owner });
+          await sendCalldata(wallet, publicClient, owner, tx as { to: Address; data: `0x${string}`; value?: bigint });
+          mark("source", "done");
+        } else mark("source", "skipped", "Already enabled");
       }
-      // 2. claim source
-      current = "source";
-      mark("source", "active");
-      const vaultAddr = plan.vault.predicted;
-      const dfs = new DFSClient(publicClient, vaultAddr, dfsOptions);
-      const snap: VaultSnapshot = await readVaultSnapshot(vaultAddr);
-      if (!snap.claimSourceEnabled) {
-        mark("source", "active", "Confirm in your wallet");
-        const tx = await dfs.planSetClaimSource({ source: snap.feeVault, allowed: true, caller: owner });
-        await sendCalldata(wallet, publicClient, owner, tx as { to: Address; data: `0x${string}`; value?: bigint });
-        mark("source", "done");
-      } else mark("source", "skipped", "Already enabled");
       // 3. launch
       let receipt;
       let hash: `0x${string}`;
@@ -241,7 +252,6 @@ export function Create() {
       return readAllocation({ token: launched!.token, curve: launched!.curve, creator: w.address as Address, txHash: launched!.hash, block: launched!.block });
     },
   });
-  const doneVault = useQuery({ queryKey: ["vault", launched?.vault.toLowerCase()], enabled: !!launched, queryFn: () => readVaultSnapshot(launched!.vault) });
 
   const feePct = tpl.data ? tpl.data.feeBps / 100 : null;
   const protocolPct = AMMORA_PROTOCOL_TRADING_FEE_SHARE_BPS / 100;
@@ -253,7 +263,7 @@ export function Create() {
         <div className="page-hd">
           <div>
             <h1>Launch a repo</h1>
-            <p>Four steps. A few transactions on GIWA Sepolia, each simulated before your wallet opens.</p>
+            <p>Four steps. A few transactions on GIWA Sepolia (one fewer for a single contributor), each simulated before your wallet opens.</p>
           </div>
         </div>
 
@@ -313,40 +323,7 @@ export function Create() {
             )}
 
             {/* Missing */}
-            {result?.stage === "missing" && (
-              <section className="step-card panel" id="katki" aria-labelledby="miss-h">
-                <div className="panel-hd"><h3 id="miss-h">No .katki.json in {result.ref.owner}/{result.ref.name}</h3><span className="tag" style={{ marginLeft: "auto" }}>Step 2 blocked</span></div>
-                <div className="missing">
-                  <p className="muted" style={{ fontSize: 14, maxWidth: "62ch" }}>
-                    Tributary pays fees only to wallets listed in this file, so a launch cannot start without it.
-                    {result.authors ? ` GitHub lists ${result.authors} commit authors on ${result.info.defaultBranch}; the template names the first few. Each of them adds their own wallet.` : " Add each contributor's GitHub handle and wallet."}
-                  </p>
-                  <ol>
-                    <li>
-                      <div>
-                        <h3>Add the file at the repository root</h3>
-                        <p>List GitHub handles and wallets. There is no weight to write: Tributary counts each person's commits itself.</p>
-                        <pre className="code" aria-label=".katki.json template">{result.template}</pre>
-                        <div style={{ marginTop: 12 }}><CopyButtonText text={result.template} /></div>
-                      </div>
-                    </li>
-                    <li>
-                      <div>
-                        <h3>Ask each contributor to add their wallet</h3>
-                        <p>One pull request per person is the cleanest record: the wallet then comes from the account that wrote the code. Leave out anyone who does not want a share.</p>
-                      </div>
-                    </li>
-                    <li>
-                      <div>
-                        <h3>Merge to the default branch and check again</h3>
-                        <p>Tributary reads the file at the latest commit on <span className="mono">{result.info.defaultBranch}</span> and records that commit hash in the launch.</p>
-                        <div style={{ marginTop: 12 }}><button className="btn btn-sm btn-primary" type="button" onClick={() => void read(repo)}>Check again</button> <Link className="btn btn-sm" to="/katki">Format reference</Link></div>
-                      </div>
-                    </li>
-                  </ol>
-                </div>
-              </section>
-            )}
+            {result?.stage === "missing" && <MissingGuide result={result} wallet={w.status === "connected" ? w.address : undefined} onCheck={() => void read(repo)} />}
 
             {/* Invalid */}
             {result?.stage === "invalid" && (
@@ -357,7 +334,7 @@ export function Create() {
                     Found the file at <span className="mono">{result.sha.slice(0, 7)}</span> on <span className="mono">{result.info.defaultBranch}</span>, but it failed validation. Nothing was sent to the chain. Fix the {result.errors.length} problem{result.errors.length > 1 ? "s" : ""} below, merge, then check again.
                   </p>
                   <ul className="err-list">{result.errors.map((e, i) => <li key={i}>{e.message}</li>)}</ul>
-                  <div><button className="btn btn-sm btn-primary" type="button" onClick={() => void read(repo)}>Check again</button> <Link className="btn btn-sm" to="/katki">Format reference</Link></div>
+                  <div><button className="btn btn-sm" type="button" onClick={() => void read(repo)}>Check again</button> <Link className="btn btn-sm" to="/katki">Format reference</Link></div>
                 </div>
               </section>
             )}
@@ -367,7 +344,7 @@ export function Create() {
               <section className="step-card" aria-labelledby="s2" style={{ marginTop: 32 }}>
                 <div className="step-hd">
                   <h2 id="s2">Contributors</h2>
-                  <p>These wallets receive the trading fee. The vault holds at most {MAX_RECIPIENTS} recipients: the {MAX_RECIPIENTS} listed contributors with the most commits.</p>
+                  <p>{selection?.ok && selection.mode === "direct" ? "This repository has one listed contributor, so the trading fee goes straight to that wallet: there is no fee vault and no split." : `These wallets receive the trading fee. The vault holds at most ${MAX_RECIPIENTS} recipients: the ${MAX_RECIPIENTS} listed contributors with the most commits.`}</p>
                 </div>
                 <div className="found">
                   <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" style={{ color: "var(--pos)" }} aria-hidden="true"><path d="M4 10.5 8 14.5 16 5.5" /></svg>
@@ -400,7 +377,7 @@ export function Create() {
                   {found.notInFile.length > 0 && (
                     <span><b>Not in .katki.json ({found.notInFile.length}):</b> {found.notInFile.slice(0, 10).map((c) => c.login).join(", ")}{found.notInFile.length > 10 ? ` and ${found.notInFile.length - 10} more` : ""}. They get no share.</span>
                   )}
-                  {selection.ok && <span>Shares are the commit counts of the {selection.included.length} included contributors, scaled to 10,000 basis points. Rounding goes to the largest share.</span>}
+                  {selection.ok && selection.mode === "vault" && <span>Shares are the commit counts of the {selection.included.length} included contributors, scaled to 10,000 basis points. Rounding goes to the largest share.</span>}
                 </div>
               </section>
             )}
@@ -459,13 +436,13 @@ export function Create() {
                 <div className="panel-bd">
                   <dl className="kv">
                     <div><dt>Repository</dt><dd>{found.ref.owner}/{found.ref.name}</dd></div>
-                    <div><dt>.katki.json</dt><dd><span className="mono">{found.info.defaultBranch} @ {found.sha.slice(0, 7)}</span>, {selection.included.length} in the fee vault</dd></div>
+                    <div><dt>.katki.json</dt><dd><span className="mono">{found.info.defaultBranch} @ {found.sha.slice(0, 7)}</span>, {selection.mode === "direct" ? "1, paid directly" : `${selection.included.length} in the fee vault`}</dd></div>
                     <div><dt>Token</dt><dd>{name.trim()} ({symbol.toUpperCase()})</dd></div>
                     {tpl.data && <div><dt>Supply</dt><dd>{fmt.compact(Number(tpl.data.supply) / 10 ** tpl.data.tokenDecimals)}, of which {fmt.compact(tpl.data.totalBase / 10 ** tpl.data.tokenDecimals)} on the curve</dd></div>}
                     <div><dt>Contributor allocation</dt><dd>{firstBuyWei && firstBuyWei > 0n ? `${fmt.eth(firstBuyWei)} ETH first buy, then ${selection.included.length} transfers` : "None"}</dd></div>
-                    {feePct !== null && <div><dt>Trading fee</dt><dd>{fmt.pct(feePct, feePct % 1 ? 2 : 0)} of each trade, {fmt.pct(100 - protocolPct, 0)} of it to the fee vault</dd></div>}
+                    {feePct !== null && <div><dt>Trading fee</dt><dd>{fmt.pct(feePct, feePct % 1 ? 2 : 0)} of each trade, {fmt.pct(100 - protocolPct, 0)} of it {selection.mode === "direct" ? "to the contributor's wallet" : "to the fee vault"}</dd></div>}
                     {tpl.data && <div><dt>Graduates at</dt><dd>{fmt.eth(tpl.data.graduationWei)} ETH raised</dd></div>}
-                    <div><dt>Fee vault owner</dt><dd>{w.address ? <span className="mono">{fmt.short(w.address)}</span> : "The wallet you connect"}</dd></div>
+                    {selection.mode === "vault" ? <div><dt>Fee vault owner</dt><dd>{w.address ? <span className="mono">{fmt.short(w.address)}</span> : "The wallet you connect"}</dd></div> : <div><dt>Fee recipient</dt><dd><span className="mono">{fmt.short(selection.included[0]!.wallet)}</span>, paid directly (no vault)</dd></div>}
                     <div><dt>Network</dt><dd>GIWA Sepolia</dd></div>
                     {sims && gasPrice.data !== undefined && <div><dt>Estimated gas</dt><dd>{fmt.eth(gasUnits * gasPrice.data, 5)} ETH, {fmt.compact(Number(gasUnits))} gas units</dd></div>}
                   </dl>
@@ -485,13 +462,13 @@ export function Create() {
                     </table>
                   </div>
                   <div className="pick" style={{ marginTop: 12 }}>
-                    <span><b>Who can change what.</b> You own the fee vault and are the launch creator. The recipient list and shares are fixed in the vault when it is created. After graduation, trading fees go to liquidity positions held by your wallet and reach the vault only when you add them.</span>
-                    <span>Your recorded commit is <span className="mono">{found.sha.slice(0, 7)}</span>; the launch metadata names this repository, commit and vault.</span>
+                    <span><b>Who can change what.</b> {selection.mode === "direct" ? "You are the launch creator. The fee recipient is written into the launch configuration and cannot be changed. There is no vault." : "You own the fee vault and are the launch creator. The recipient list and shares are fixed in the vault when it is created."} After graduation, trading fees go to liquidity positions held by your wallet and reach {selection.mode === "direct" ? "the contributor" : "the vault"} only when you send them on.</span>
+                    <span>Your recorded commit is <span className="mono">{found.sha.slice(0, 7)}</span>; the launch metadata names this repository, commit and {selection.mode === "direct" ? "fee recipient" : "vault"}.</span>
                   </div>
                   {w.status === "connected" && (
                     <div style={{ marginTop: 16 }}>
                       <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Simulation, nothing sent</h3>
-                      {simBusy && <p className="muted-note"><Spinner /> Simulating the vault, the configuration and the launch…</p>}
+                      {simBusy && <p className="muted-note"><Spinner /> Simulating {selection.mode === "direct" ? "the configuration and the launch" : "the vault, the configuration and the launch"}…</p>}
                       {simError && <Banner kind="err" action={<button className="btn btn-sm" type="button" onClick={() => { setSims(null); setPhase("empty"); setTimeout(() => setPhase("review"), 0); }}>Try again</button>}>{simError}</Banner>}
                       {sims && (
                         <div className="sim-list">
@@ -509,7 +486,7 @@ export function Create() {
                   {runErr && <div style={{ marginTop: 12 }}><Banner kind="err">{runErr} Steps already confirmed stay done; starting again skips them.</Banner></div>}
                 </div>
                 <div className="confirm-bar">
-                  <p>The split is written into the fee vault and the launch configuration. Neither can be changed after the transactions confirm.</p>
+                  <p>{selection.mode === "direct" ? "The fee recipient is written into the launch configuration and cannot be changed after the transaction confirms." : "The split is written into the fee vault and the launch configuration. Neither can be changed after the transactions confirm."}</p>
                   {phase !== "done" && w.status === "connected" && (
                     <button className="btn btn-primary btn-lg" type="button" onClick={launch} disabled={phase === "running" || !simsOk || simBusy || !wallet || !!sentLaunchTx}>
                       {sentLaunchTx ? "Launch sent" : phase === "running" ? <><Spinner />Confirm in your wallet</> : `Launch ${symbol.toUpperCase() || "token"}`}
@@ -529,13 +506,13 @@ export function Create() {
                   {firstBuyWei && firstBuyWei > 0n ? "Send the bought tokens to your contributors below." : "Share the launch page with your contributors."}{" "}
                   <a className="link" href={explorerTx(launched.hash)} target="_blank" rel="noreferrer">View transaction</a>
                 </Banner>
-                {hasBuy && doneVault.data && (
+                {hasBuy && selection?.ok && (
                   <AllocationPanel
                     token={launched.token}
                     symbol={symbol.toUpperCase()}
                     decimals={tpl.data?.tokenDecimals ?? 9}
                     creator={w.address as Address}
-                    vault={doneVault.data}
+                    recipients={selection.included.map((i) => ({ recipient: i.wallet as Address, share: BigInt(i.bps) }))}
                     info={katkiInfoForPanel}
                     alloc={doneAlloc.data as AllocationRead | undefined}
                     loading={doneAlloc.isPending}
@@ -544,21 +521,12 @@ export function Create() {
                     error={doneAlloc.isError ? "The allocation could not be read yet. Open the launch page in a moment." : null}
                   />
                 )}
-                <p className="muted-note">Vault <a className="link mono" href={explorerAddress(launched.vault)} target="_blank" rel="noreferrer">{fmt.short(launched.vault)}</a> · token <span className="mono">{fmt.short(launched.token)}</span> <CopyButton value={launched.token} label="Copy token address" /></p>
+                <p className="muted-note">{launched.vault ? <>Vault <a className="link mono" href={explorerAddress(launched.vault)} target="_blank" rel="noreferrer">{fmt.short(launched.vault)}</a></> : "Fees go straight to the contributor's wallet"} · token <span className="mono">{fmt.short(launched.token)}</span> <CopyButton value={launched.token} label="Copy token address" /></p>
               </section>
             )}
           </div>
         </div>
       </div>
     </main>
-  );
-}
-
-function CopyButtonText({ text }: { text: string }) {
-  const [done, setDone] = useState(false);
-  return (
-    <button className="btn btn-sm" type="button" onClick={() => { navigator.clipboard?.writeText(text).catch(() => {}); setDone(true); setTimeout(() => setDone(false), 1400); }}>
-      {done ? "Copied" : "Copy template"}
-    </button>
   );
 }

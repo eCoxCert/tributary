@@ -57,6 +57,19 @@ M = [
     ("src/lib/katkiCheck.ts", 'if (!truncated) return { state: "mismatch"', 'if (false) return { state: "mismatch"', "complete list also triggers exact checks"),
     ("src/lib/github.ts", "if (hit) return hit as Promise<T>;", "", "no sharing of calls per repo"),
     ("src/lib/katkiCheck.ts", "if (missing.length > MAX_EXACT_CHECKS)", "if (false)", "unbounded exact checks"),
+    ("src/lib/split.ts", "if (ranked.length === 1) {", "if (false) {", "single contributor not paid directly"),
+    ("src/lib/split.ts", "included: [{ ...only, bps: TOTAL_BPS }]", "included: [{ ...only, bps: 5000 }]", "direct share not 100%"),
+    ("src/lib/create.ts", "(recipients.length === 1 ? \"direct\" : \"vault\")", "\"vault\"", "single contributor still gets a vault"),
+    ("src/lib/create.ts", "...(mode === \"vault\" ? [\"vault\", \"source\"] : [])", "...[\"vault\", \"source\"]", "vault steps in the direct flow"),
+    ("src/lib/create.ts", "const feeRecipient = \"vault\" in target ? target.vault : target.recipient;", "const feeRecipient = input.owner;", "direct: Config recipient not the contributor"),
+    ("src/lib/verify.ts", "else if (!eq(i.partnerRecipient, target as string)) {", "else if (false) {", "partner recipient not compared to the metadata target"),
+    ("src/lib/verify.ts", "if (w.length !== 1 || w[0] !== (i.metaRecipient as string).toLowerCase())", "if (false)", "direct: file wallet not checked"),
+    ("src/lib/verify.ts", "if (!direct && !vaulted) {", "if (false) {", "vault+recipient or neither accepted"),
+    ("src/lib/metadata.ts", 'const key = meta.vault !== undefined ? "vault" : "recipient";', 'const key = "vault";', "recipient written as vault"),
+    ("src/lib/github.ts", "const hit = fresh ? undefined : readCache<string>(deps, key, false);", "const hit = readCache<string>(deps, key, false);", "Check again reuses a stale head sha"),
+    ("src/lib/readRepo.ts", "getHeadSha(ref, info.defaultBranch, deps, true)", "getHeadSha(ref, info.defaultBranch, deps)", "Create form does not ask for a fresh head"),
+    ("src/lib/katki.ts", "mine && mine.github.toLowerCase() === h.login.toLowerCase() ? mine.wallet : WALLET_PLACEHOLDER", "WALLET_PLACEHOLDER", "connected wallet not filled in"),
+    ("src/lib/katki.ts", "?filename=.katki.json&value=${encodeURIComponent(json)}", "?filename=.katki.json&value=${json}", "new-file link content not encoded"),
 ]
 bad = 0
 for path, old, new, what in M:

@@ -11,6 +11,7 @@ import { selectVaultRecipients } from "../lib/split";
 import { verifyLaunch } from "../lib/cardVerify";
 import { rateLimitMessage } from "../lib/github";
 import type { Card } from "../hooks/useChainData";
+import type { DirectSnapshot } from "../lib/launches";
 import { splitByShares } from "../lib/allocation";
 import type { LaunchRecord } from "../lib/launches";
 
@@ -25,17 +26,20 @@ const SHA = "3f9a2c1d4e5b6a7988776655443322110ffeeddc";
 const sel = selectVaultRecipients(EXAMPLE_CONTRIBUTORS.map((c) => ({ github: c.github, wallet: c.wallet, commits: c.commits })));
 if (!sel.ok) throw new Error("fixture");
 const included = sel.included;
+export const DIRECT_WALLET = included[0]!.wallet as Address; // the single contributor of the `direct` fixture
 
 export async function fixtureLaunch(kind: string): Promise<LaunchData> {
   if (kind === "loading") return new Promise<LaunchData>(() => {});
   if (kind === "error") throw new Error("The GIWA Sepolia RPC timed out after 10 seconds (fixture).");
   const real = await readCurveSnapshot(FIXTURE_CURVE, FIXTURE_TOKEN);
   const good = kind !== "mismatch";
+  const isDirect = kind === "direct";
+  const partner = isDirect ? DIRECT_WALLET : FIXTURE_VAULT;
   if (kind === "info-wait") await new Promise(() => {});
   const snap = good
-    ? { ...real, state: { ...real.state, creator: FIXTURE_OWNER, partnerRecipient: FIXTURE_VAULT, feeVault: FEE_STORE }, config: { ...real.config, partnerRecipient: FIXTURE_VAULT, creatorShareOfNonProtocolBps: 0 } }
+    ? { ...real, state: { ...real.state, creator: FIXTURE_OWNER, partnerRecipient: partner, feeVault: FEE_STORE }, config: { ...real.config, partnerRecipient: partner, creatorShareOfNonProtocolBps: 0 } }
     : real; // mismatch: the real config names someone else and gives the creator 30% of the fee
-  return { token: FIXTURE_TOKEN, curve: FIXTURE_CURVE, snap, meta: { app: "tributary", repo: "tidewater/quill-rpc", katkiCommit: SHA, vault: FIXTURE_VAULT } };
+  return { token: FIXTURE_TOKEN, curve: FIXTURE_CURVE, snap, meta: isDirect ? { app: "tributary", repo: "proxycox/solo-tool", katkiCommit: SHA, recipient: DIRECT_WALLET } : { app: "tributary", repo: "tidewater/quill-rpc", katkiCommit: SHA, vault: FIXTURE_VAULT } };
 }
 
 export function fixtureVault(kind: string): VaultSnapshot {
@@ -61,7 +65,23 @@ export const fixtureInfoAsync = async (kind: string): Promise<KatkiInfo> => {
   return fixtureInfo(kind);
 };
 
-export const fixtureInfo = (kind: string): KatkiInfo => ({
+export function fixtureDirect(): DirectSnapshot {
+  return { recipient: DIRECT_WALLET, feeVault: FEE_STORE, pending: 31_000_000_000_000_000n };
+}
+
+export const fixtureInfo = (kind: string): KatkiInfo => (kind === "direct" ? fixtureDirectInfo : fixtureInfoBase(kind));
+
+const fixtureDirectInfo: KatkiInfo = {
+  katki: { state: "ok", wallets: [DIRECT_WALLET] },
+  provenance: { state: "ok" },
+  handles: { state: "ok" },
+  file: { version: 1, contributors: [{ github: "mira-k", wallet: DIRECT_WALLET }] },
+  history: [{ login: "mira-k", contributions: 312 }],
+  repo: { fullName: "proxycox/solo-tool", defaultBranch: "main", stars: 12, language: "TypeScript", isPrivate: false, htmlUrl: "https://github.com/proxycox/solo-tool" },
+  notes: [],
+};
+
+const fixtureInfoBase = (kind: string): KatkiInfo => ({
   katki: kind === "unverifiable" ? { state: "unavailable", reason: "rate limit" } : { state: "ok", wallets: EXAMPLE_CONTRIBUTORS.map((c) => c.wallet) },
   provenance: kind === "unverifiable" ? { state: "unavailable", reason: "rate limit" } : { state: "ok" },
   handles: kind === "unverifiable" ? { state: "unavailable", reason: "rate limit" } : { state: "ok" },
@@ -117,11 +137,12 @@ export async function fixtureCard(rec: LaunchRecord, loading: boolean): Promise<
     provenance: unavailable ? { state: "unavailable", reason: why } : { state: "ok" },
     handles: unavailable ? { state: "unavailable", reason: why } : { state: "ok" },
   });
-  return { rec, snap: named, vault: fixtureVault("ok"), timestamp: Date.now() - 3_600_000 * (1 + (rec.block % 20n === 0n ? 1 : 5)), verified };
+  return { rec, snap: named, vault: fixtureVault("ok"), direct: null, timestamp: Date.now() - 3_600_000 * (1 + (rec.block % 20n === 0n ? 1 : 5)), verified };
 }
 
-export function fixtureAllocation(): AllocationRead {
+export function fixtureAllocation(kind = "ok"): AllocationRead {
   const total = 120_000_000_000_000_000n; // 120M tokens at 9 decimals
+  if (kind === "direct") return { firstBuy: total, sent: new Map() };
   const dues = splitByShares(total, included.map((i) => BigInt(i.bps)));
   const sent = new Map<string, bigint>();
   included.slice(0, 2).forEach((r, i) => sent.set(r.wallet.toLowerCase(), dues[i]!));

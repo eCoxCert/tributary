@@ -4,11 +4,11 @@
  */
 import { getContributorsInfo, getHeadSha, getKatkiText, getRepoInfo, GitHubError, parseRepoInput, defaultDeps, type Deps, type RepoInfo, type RepoRef } from "./github";
 import { checkAgainstHistory, missingFromFile, parseKatki, templateFor, type KatkiFile, type KatkiIssue, type RepoContributor } from "./katki";
-import { selectVaultRecipients, type VaultSelection } from "./split";
+import { planRecipients, type RecipientPlan } from "./split";
 
 export type ReadResult =
   | { stage: "error"; message: string; retryable: boolean }
-  | { stage: "missing"; ref: RepoRef; info: RepoInfo; sha: string; template: string; authors: number }
+  | { stage: "missing"; ref: RepoRef; info: RepoInfo; sha: string; template: string; authors: number; history: RepoContributor[] }
   | { stage: "invalid"; ref: RepoRef; info: RepoInfo; sha: string; errors: KatkiIssue[]; warnings: KatkiIssue[] }
   | {
       stage: "found";
@@ -18,7 +18,7 @@ export type ReadResult =
       file: KatkiFile;
       warnings: KatkiIssue[];
       history: RepoContributor[];
-      selection: VaultSelection;
+      selection: RecipientPlan;
       notInFile: RepoContributor[];
     };
 
@@ -26,9 +26,9 @@ export async function readRepository(input: string, deps: Deps = { ...defaultDep
   const ref = parseRepoInput(input);
   if (!ref) return { stage: "error", message: "Enter the repository as owner/name, for example tidewater/quill-rpc.", retryable: false };
   try {
-    const info = await getRepoInfo(ref, deps);
+    const info = await getRepoInfo(ref, deps, true);
     if (info.isPrivate) return { stage: "error", message: `${info.fullName} is private. Tributary can read public repositories only.`, retryable: false };
-    const sha = await getHeadSha(ref, info.defaultBranch, deps);
+    const sha = await getHeadSha(ref, info.defaultBranch, deps, true);
     const text = await getKatkiText(ref, sha, deps);
     if (text === null) {
       let history: RepoContributor[] = [];
@@ -37,7 +37,7 @@ export async function readRepository(input: string, deps: Deps = { ...defaultDep
       } catch {
         /* the template falls back to a placeholder handle */
       }
-      return { stage: "missing", ref, info, sha, template: templateFor(history), authors: history.length };
+      return { stage: "missing", ref, info, sha, template: templateFor(history), authors: history.length, history };
     }
     const parsed = parseKatki(text);
     if (!parsed.ok) return { stage: "invalid", ref, info, sha, errors: parsed.errors, warnings: [] };
@@ -55,7 +55,7 @@ export async function readRepository(input: string, deps: Deps = { ...defaultDep
       file: parsed.file,
       warnings: parsed.warnings,
       history,
-      selection: selectVaultRecipients(checked.eligible),
+      selection: planRecipients(checked.eligible),
       notInFile: missingFromFile(parsed.file, history),
     };
   } catch (e) {

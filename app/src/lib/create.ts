@@ -33,8 +33,21 @@ export type CreateInput = {
 
 export type Tx = { to: Address; data: Hex; value?: bigint };
 
+export type CreateMode = "direct" | "vault";
+/** One recipient: fees go straight to that wallet, no vault. Two to five: a fee vault. */
+export const createMode = (recipients: readonly unknown[]): CreateMode => (recipients.length === 1 ? "direct" : "vault");
+
+/** Ids of the transactions the flow sends, in order. No vault steps for a single recipient. */
+export function createStepIds(mode: CreateMode, firstBuy: boolean): string[] {
+  return [...(mode === "vault" ? ["vault", "source"] : []), ...(firstBuy ? ["wrap", "approve"] : []), "launch"];
+}
+
 export type CreatePlan = {
   input: CreateInput;
+  mode: CreateMode;
+  /** Set when fees go straight to one wallet. */
+  recipient: Address | null;
+  /** null for a single recipient: no vault is created. */
   vault: {
     predicted: Address;
     existing: Address | null;
@@ -42,7 +55,7 @@ export type CreatePlan = {
     ready: boolean;
     issues: string[];
     tx: Tx;
-  };
+  } | null;
   config: AmmoraV4Config;
   segments: readonly AmmoraV4Segment[];
   metadataURI: string;
@@ -58,10 +71,10 @@ export function vaultSalt(input: CreateInput): Hex {
 }
 
 /** Template Config with Tributary's overrides. Pure, so it can be tested without a chain. */
-export function composeConfig(t: AmmoraV4Config, owner: Address, vault: Address): AmmoraV4Config {
+export function composeConfig(t: AmmoraV4Config, owner: Address, feeRecipient: Address): AmmoraV4Config {
   return {
     ...t,
-    partnerRecipient: vault,
+    partnerRecipient: feeRecipient, // the vault, or the single contributor's wallet
     creatorShareOfNonProtocolBps: 0,
     leftoverReceiver: owner,
     postMigrationCollectFeeMode: 1, // quote token only: the vault pays out WETH
@@ -70,25 +83,42 @@ export function composeConfig(t: AmmoraV4Config, owner: Address, vault: Address)
 }
 
 /** Config and metadata for one launch; the vault named in the metadata is the Config's fee recipient. */
-export function assembleLaunch(input: Pick<CreateInput, "owner" | "repo" | "katkiCommit">, template: AmmoraV4Config, vault: Address) {
-  return { config: composeConfig(template, input.owner, vault), metadataURI: encodeTributaryMetadata({ repo: input.repo, katkiCommit: input.katkiCommit, vault }) };
+export function assembleLaunch(input: Pick<CreateInput, "owner" | "repo" | "katkiCommit">, template: AmmoraV4Config, target: { vault: Address } | { recipient: Address }) {
+  const feeRecipient = "vault" in target ? target.vault : target.recipient;
+  const meta = "vault" in target ? { vault: target.vault } : { recipient: target.recipient };
+  return { config: composeConfig(template, input.owner, feeRecipient), metadataURI: encodeTributaryMetadata({ repo: input.repo, katkiCommit: input.katkiCommit, ...meta } as Parameters<typeof encodeTributaryMetadata>[0]) };
 }
 
 export async function buildCreatePlan(input: CreateInput, client: PublicClient = publicClient): Promise<CreatePlan> {
   const tpl = await readTemplateConfig(client);
   if (!tpl) throw new Error("The template launch configuration could not be read from the GIWA Sepolia config registry, so the launch cannot be built. Try again in a moment.");
   if (!tpl.enabled) throw new Error("The template launch configuration is disabled in the config registry.");
-  const dfs = new DFSFactoryClient(client, ADDR.dfsFactory, dfsOptions);
-  const salt = vaultSalt(input);
-  const pre = await dfs.getVaultCreationPreflight({
-    owner: input.owner,
-    token: ADDR.weth,
-    base: ADDR.weth,
-    recipients: input.recipients.map((r) => ({ recipient: r.wallet, share: BigInt(r.bps) })),
-    userSalt: salt,
-  });
-  const vault = pre.predictedVault;
-  const { config, metadataURI } = assembleLaunch(input, tpl.config, vault);
+  const mode = createMode(input.recipients);
+  let vaultInfo: CreatePlan["vault"] = null;
+  let target: { vault: Address } | { recipient: Address };
+  if (mode === "direct") {
+    target = { recipient: (input.recipients[0] as { wallet: Address }).wallet };
+  } else {
+    const dfs = new DFSFactoryClient(client, ADDR.dfsFactory, dfsOptions);
+    const salt = vaultSalt(input);
+    const pre = await dfs.getVaultCreationPreflight({
+      owner: input.owner,
+      token: ADDR.weth,
+      base: ADDR.weth,
+      recipients: input.recipients.map((r) => ({ recipient: r.wallet, share: BigInt(r.bps) })),
+      userSalt: salt,
+    });
+    target = { vault: pre.predictedVault };
+    vaultInfo = {
+      predicted: pre.predictedVault,
+      existing: pre.existingVault && pre.existingVault !== ZERO ? (pre.existingVault as Address) : null,
+      salt,
+      ready: pre.ready || (!!pre.existingVault && pre.existingVault !== ZERO),
+      issues: pre.issues,
+      tx: { to: pre.transaction.to, data: pre.transaction.data },
+    };
+  }
+  const { config, metadataURI } = assembleLaunch(input, tpl.config, target);
   const reg = buildRegisterConfigAndCreateAmmoraV4Launch(config, tpl.segments, {
     name: input.name,
     symbol: input.symbol,
@@ -100,14 +130,9 @@ export async function buildCreatePlan(input: CreateInput, client: PublicClient =
   });
   return {
     input,
-    vault: {
-      predicted: vault,
-      existing: pre.existingVault && pre.existingVault !== ZERO ? (pre.existingVault as Address) : null,
-      salt,
-      ready: pre.ready || (!!pre.existingVault && pre.existingVault !== ZERO),
-      issues: pre.issues,
-      tx: { to: pre.transaction.to, data: pre.transaction.data },
-    },
+    mode,
+    recipient: "recipient" in target ? target.recipient : null,
+    vault: vaultInfo,
     config,
     segments: tpl.segments,
     metadataURI,
@@ -121,7 +146,9 @@ export type SimStep = { id: "vault" | "config" | "launch" | "firstbuy"; label: s
 export async function simulateCreate(plan: CreatePlan, from: Address, client: PublicClient = publicClient, firstBuyWei = 0n): Promise<SimStep[]> {
   const out: SimStep[] = [];
   // 1. fee vault
-  if (plan.vault.existing) {
+  if (!plan.vault) {
+    /* single recipient: no vault, nothing to create */
+  } else if (plan.vault.existing) {
     out.push({ id: "vault", label: "Create the fee vault", ok: true, detail: `A vault with these exact recipients already exists at ${plan.vault.existing}; it will be reused.` });
   } else if (!plan.vault.ready) {
     out.push({ id: "vault", label: "Create the fee vault", ok: false, detail: plan.vault.issues.join(" ") || "The vault factory reported the vault is not ready." });

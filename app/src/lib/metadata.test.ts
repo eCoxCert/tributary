@@ -12,7 +12,7 @@ describe("tributary metadata", () => {
     expect(back?.app).toBe("tributary");
     expect(back?.repo).toBe(meta.repo);
     expect(back?.katkiCommit).toBe(meta.katkiCommit);
-    expect(back?.vault.toLowerCase()).toBe(vault.toLowerCase());
+    expect(back?.vault?.toLowerCase()).toBe(vault.toLowerCase());
   });
   it("reads percent-encoded and raw JSON data URIs too", () => {
     const json = JSON.stringify({ app: "tributary", repo: "a/b", katkiCommit: "abcdef1", vault });
@@ -30,10 +30,25 @@ describe("tributary metadata", () => {
   });
   it("returns null when a field is missing or malformed", () => {
     const mk = (o: object) => "data:application/json," + JSON.stringify(o);
-    expect(decodeTributaryMetadata(mk({ app: "tributary", repo: "a/b", katkiCommit: "abcdef1" }))).toBeNull();
+    // neither vault nor recipient still decodes (the verifier calls it a mismatch); a present but non-address field is garbage
+    expect(decodeTributaryMetadata(mk({ app: "tributary", repo: "a/b", katkiCommit: "abcdef1" }))).toMatchObject({ repo: "a/b" });
+    expect(decodeTributaryMetadata(mk({ app: "tributary", repo: "a/b", katkiCommit: "abcdef1", recipient: "0x12" }))).toBeNull();
     expect(decodeTributaryMetadata(mk({ app: "tributary", repo: "nope", katkiCommit: "abcdef1", vault }))).toBeNull();
     expect(decodeTributaryMetadata(mk({ app: "tributary", repo: "a/b", katkiCommit: "xyz", vault }))).toBeNull();
     expect(decodeTributaryMetadata(mk({ app: "tributary", repo: "a/b", katkiCommit: "abcdef1", vault: "0x12" }))).toBeNull();
+  });
+  it("round-trips a single-recipient launch (recipient instead of vault)", () => {
+    const uri = encodeTributaryMetadata({ repo: "a/b", katkiCommit: "abcdef1", recipient: vault as `0x${string}` });
+    const back = decodeTributaryMetadata(uri);
+    expect(back?.recipient?.toLowerCase()).toBe(vault.toLowerCase());
+    expect(back?.vault).toBeUndefined();
+    expect(JSON.parse(atob(uri.split(",")[1] as string))).not.toHaveProperty("vault");
+  });
+  it("keeps a record with both vault and recipient so it can be flagged", () => {
+    const both = "data:application/json," + JSON.stringify({ app: "tributary", repo: "a/b", katkiCommit: "abcdef1", vault, recipient: vault });
+    const back = decodeTributaryMetadata(both);
+    expect(back?.vault).toBeDefined();
+    expect(back?.recipient).toBeDefined();
   });
   it("refuses to encode bad input", () => {
     expect(() => encodeTributaryMetadata({ ...meta, repo: "nope" })).toThrow();

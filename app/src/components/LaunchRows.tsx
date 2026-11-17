@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { Av, Sk, StatusTag, type LaunchStatus } from "./ui";
 import { fmt } from "../lib/format";
-import type { Card } from "../hooks/useChainData";
+import { cardFees, cardRecipients, type Card } from "../hooks/useChainData";
 import { isListedVerdict, rowTitle } from "../lib/visibility";
 import type { LaunchRecord } from "../lib/launches";
 
@@ -44,14 +44,15 @@ export type RowModel = {
 };
 
 export function rowModel(card: Card): RowModel {
-  const { rec, snap, vault, timestamp } = card;
+  const { rec, snap, timestamp } = card;
   const st = statusOf(card);
   const pct = Math.min(100, Math.round(snap.progress.progressBps / 100));
   const remaining = snap.progress.target > snap.progress.current ? snap.progress.target - snap.progress.current : 0n;
   const remEth = Number(remaining) / 1e18;
   const left = st === "grad" ? "In pool" : snap.progress.progressBps >= 10_000 ? "Ready" : `${remEth > 1000 ? fmt.compact(remEth) : fmt.eth(remaining)} ETH`;
   const claims = !rec.meta || card.verified?.status === "verified"; // no contributor or fee claims for anything unchecked
-  const fees = vault ? `${fmt.eth(vault.totalFunded + vault.pendingInFeeVault)} ETH` : null;
+  const feeWei = cardFees(card);
+  const fees = feeWei !== null ? `${fmt.eth(feeWei)} ETH` : null;
   const age = timestamp ? fmt.ago(timestamp) : null;
   return {
     title: rowTitle(card.verified?.status === "verified" ? rec.meta?.repo ?? null : null, snap.symbol, rec.token),
@@ -60,7 +61,7 @@ export function rowModel(card: Card): RowModel {
     pct: st === "grad" ? 100 : pct,
     left,
     fees: claims ? fees : null,
-    recipients: claims && vault ? vault.recipients.length : null,
+    recipients: claims ? cardRecipients(card) : null,
     unchecked: card.verified?.status === "unverifiable",
     symbol: snap.symbol,
     name: snap.name,

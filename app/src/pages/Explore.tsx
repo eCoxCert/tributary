@@ -4,7 +4,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { Banner } from "../components/ui";
 import { rateLimitNote } from "../lib/github";
 import { LaunchRow, LaunchSkeletonRows, LaunchesHead, isListed, statusOf } from "../components/LaunchRows";
-import { useCards, useDiscovery, type Card } from "../hooks/useChainData";
+import { cardFees, cardRecipients, useCards, useDiscovery, type Card } from "../hooks/useChainData";
 import { fmt } from "../lib/format";
 import { listState, plural } from "../lib/visibility";
 
@@ -51,8 +51,8 @@ export function Explore() {
       if (sort === "new") return a.rec.block > b.rec.block ? -1 : a.rec.block < b.rec.block ? 1 : 0;
       if (!a.card || !b.card) return a.card ? -1 : b.card ? 1 : 0;
       if (sort === "close") return (statusOf(a.card) === "grad" ? 1 : 0) - (statusOf(b.card) === "grad" ? 1 : 0) || b.card.snap.progress.progressBps - a.card.snap.progress.progressBps;
-      if (sort === "fees") return Number((b.card.vault?.totalFunded ?? 0n) + (b.card.vault?.pendingInFeeVault ?? 0n) - ((a.card.vault?.totalFunded ?? 0n) + (a.card.vault?.pendingInFeeVault ?? 0n)));
-      return (b.card.vault?.recipients.length ?? 0) - (a.card.vault?.recipients.length ?? 0);
+      if (sort === "fees") return Number((cardFees(b.card) ?? 0n) - (cardFees(a.card) ?? 0n));
+      return (cardRecipients(b.card) ?? 0) - (cardRecipients(a.card) ?? 0);
     });
     return filtered;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -61,8 +61,8 @@ export function Explore() {
   const allRead = !d.scanning && settled === recs.length;
   const live = loaded.filter((c) => statusOf(c) !== "grad").length;
   const grad = loaded.filter((c) => statusOf(c) === "grad").length;
-  const people = loaded.reduce((a, c) => a + (c.vault?.recipients.length ?? 0), 0);
-  const fees = loaded.reduce((a, c) => a + (c.vault ? c.vault.totalFunded + c.vault.pendingInFeeVault : 0n), 0n);
+  const people = loaded.reduce((a, c) => a + (cardRecipients(c) ?? 0), 0);
+  const fees = loaded.reduce((a, c) => a + (cardFees(c) ?? 0n), 0n);
 
   const visibleItems = recs.map((rec, i) => ({ rec, card: cards[i] })).filter((x) => !x.card || isListed(x.card, debug));
   const state = listState({ scanning: d.scanning, error: !!d.error, anyPending: queries.some((q) => q.isPending), visible: visibleCards.length, shown: view.length, rawCount: d.launches.length });
