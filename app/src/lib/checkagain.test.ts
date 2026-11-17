@@ -52,6 +52,11 @@ describe("making the file easy to create", () => {
   it("a template that still has placeholders is rejected by the validator", () => {
     expect(parseKatki(templateFor([{ login: "solo", contributions: 9 }])).ok).toBe(false);
   });
+  it("encodes the file content, even when it contains % or &", () => {
+    const json = 'a%41&b=c';
+    const url = githubNewFileUrl({ owner: "o", name: "r" }, "main", json);
+    expect(decodeURIComponent(url.split("value=")[1] as string)).toBe(json);
+  });
   it("builds GitHub's new-file link with the name and the encoded content", () => {
     const url = githubNewFileUrl({ owner: "eCoxCert", name: "tributary" }, "main", '{ "version": 1 }');
     expect(url.startsWith("https://github.com/eCoxCert/tributary/new/main?filename=.katki.json&value=")).toBe(true);

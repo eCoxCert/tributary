@@ -291,7 +291,7 @@ export function Create() {
                     <span className="affix">github.com/</span>
                     <input className="input" id="repo" name="repo" placeholder="owner/repository" autoComplete="off" spellCheck={false} value={repo} onChange={(e) => setRepo(e.target.value)} aria-invalid={result?.stage === "error"} aria-describedby="repo-err" />
                   </div>
-                  <button className="btn btn-primary" type="submit" disabled={phase === "loading" || !repo.trim()}>Read repository</button>
+                  <button className={`btn${phase === "empty" || result?.stage === "error" ? " btn-primary" : ""}`} type="submit" disabled={phase === "loading" || !repo.trim()}>Read repository</button>
                 </div>
                 {result?.stage === "error" && (
                   <p className="err" id="repo-err" role="alert">
