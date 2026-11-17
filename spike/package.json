@@ -1,0 +1,8 @@
+{
+  "name": "ammora-spike",
+  "private": true,
+  "type": "module",
+  "scripts": { "read": "tsx read.ts", "typecheck": "tsc -p ." },
+  "dependencies": { "@ammora-protocol/sdk": "0.3.10", "viem": "^2.33.0" },
+  "devDependencies": { "tsx": "^4.19.0", "typescript": "^5.6.0", "@types/node": "^22.0.0" }
+}
