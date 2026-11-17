@@ -103,6 +103,21 @@ describe("repositories with more than 500 contributors", () => {
     const r = await readKatkiState("o/r", SHA, mk(route(() => json(500, {}))));
     expect(r.handles.state).toBe("unavailable");
   });
+  it("more than 5 handles outside the cut-off list are not checked one by one: unavailable, and no exact requests", async () => {
+    const many = JSON.stringify({ version: 1, contributors: Array.from({ length: 7 }, (_, i) => ({ github: `late${i}`, wallet: "0x" + String(i + 1).repeat(40) })) });
+    let exact = 0;
+    const f: Deps["fetch"] = async (u) => {
+      const url = String(u);
+      if (url.includes("raw.")) return new Response(many, { status: 200 });
+      if (url.includes("/compare/")) return json(200, { status: "ahead" });
+      if (url.includes("/commits?author=")) { exact++; return json(200, [{}]); }
+      if (url.includes("/contributors")) return json(200, page(100));
+      return json(200, { full_name: "o/r", default_branch: "main", private: false });
+    };
+    const r = await readKatkiState("o/r", SHA, mk(f));
+    expect(r.handles.state).toBe("unavailable");
+    expect(exact).toBe(0);
+  });
   it("a short (complete) list does not trigger exact checks: missing handle is a plain mismatch", async () => {
     let exact = 0;
     const f: Deps["fetch"] = async (u) => {

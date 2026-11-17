@@ -118,7 +118,7 @@ export function Explore() {
           <table className="ledger stack launches" aria-describedby="count">
             <LaunchesHead />
             <tbody>
-              {state === "loading" ? (
+              {state === "loading" && view.length === 0 ? (
                 <LaunchSkeletonRows rows={6} />
               ) : state === "empty" ? (
                 <tr>
