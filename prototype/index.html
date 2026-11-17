@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tributary: token launches that pay a repo's contributors</title>
+<meta name="description" content="Launch a token for an open-source repository. Every trade pays a fee to the wallets in .katki.json, split by commit share. Runs on GIWA Sepolia.">
+<meta property="og:title" content="Tributary: token launches that pay a repo's contributors">
+<meta property="og:description" content="Every trade pays a fee to the repo's contributors, split by commit share.">
+<meta name="theme-color" content="#f5f6f5" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f1214" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="../brand/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Hanken+Grotesk:wght@400..800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/tokens.css">
+<link rel="stylesheet" href="assets/app.css">
+<script>try{var t=new URLSearchParams(location.search).get("theme")||localStorage.getItem("trib-theme")||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body data-default-wallet="disconnected">
+<a class="skip" href="#main">Skip to content</a>
+
+<div class="testnet"><div class="wrap"><span><b>Testnet.</b> Tributary runs on GIWA Sepolia. Every figure in this prototype is sample data.</span></div></div>
+
+<header class="hdr">
+  <div class="wrap">
+    <a class="brand" href="index.html" aria-label="Tributary home">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2.5 5.25H8a4 4 0 0 1 4 4M21.5 5.25H16a4 4 0 0 0-4 4" stroke="currentColor" stroke-width="2.5"/><path class="stem" d="M12 8.75V21" stroke="currentColor" stroke-width="3.5"/></svg>
+      Tributary
+    </a>
+    <nav class="nav" aria-label="Main">
+      <a href="explore.html">Launches</a>
+      <a href="create.html">Launch a repo</a>
+      <a href="create.html#katki">.katki.json</a>
+      <a href="#">Docs</a>
+    </nav>
+    <div class="hdr-end">
+      <span class="netpill"><i></i><span>GIWA Sepolia</span></span>
+      <button class="iconbtn" type="button" data-theme-toggle aria-label="Switch to dark theme">
+        <svg class="theme-light-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M16.5 12.2A7 7 0 0 1 7.8 3.5a7 7 0 1 0 8.7 8.7Z"/></svg>
+        <svg class="theme-dark-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/><path d="M10 1.5v2M10 16.5v2M1.5 10h2M16.5 10h2M4 4l1.4 1.4M14.6 14.6 16 16M4 16l1.4-1.4M14.6 5.4 16 4"/></svg>
+      </button>
+      <span data-wallet-slot></span>
+      <button class="iconbtn menu-btn" type="button" aria-expanded="false" aria-label="Open menu">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 6h14M3 10h14M3 14h14"/></svg>
+      </button>
+    </div>
+  </div>
+  <nav class="mnav" aria-label="Mobile">
+    <a href="explore.html">Launches</a>
+    <a href="create.html">Launch a repo</a>
+    <a href="create.html#katki">.katki.json</a>
+    <a href="#">Docs</a>
+  </nav>
+</header>
+
+<div class="wrap" data-show-wallet="wrong" hidden style="padding-top:16px">
+  <div class="banner banner-warn" role="status">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M10 2.5 18 17H2L10 2.5Z"/><path d="M10 8v4M10 14.2v.3"/></svg>
+    <div>Your wallet is on Ethereum Sepolia. Tributary runs on GIWA Sepolia.</div>
+    <button class="btn btn-sm" type="button">Switch network</button>
+  </div>
+</div>
+
+<main id="main">
+  <!-- Hero: the product's own artifact (a real fee split) leads -->
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <h1 class="h1">Token launches that pay a repo's contributors</h1>
+        <p class="lead">Add a <span class="mono">.katki.json</span> to your repository and launch its token on a bonding curve. Every trade pays a fee to the wallets in that file, split by commit share.</p>
+        <div class="hero-cta">
+          <a class="btn btn-primary btn-lg" href="create.html">Launch your repo</a>
+          <a class="btn btn-lg" href="explore.html">See live launches</a>
+        </div>
+        <p class="hero-facts">
+          <span>Network <b>GIWA Sepolia</b></span>
+          <span data-assumed>Contributors buy first for <b>24 hours</b></span>
+          <span data-assumed>Founder share <b>locked 180 days</b></span>
+        </p>
+      </div>
+
+      <div class="panel router" aria-label="Fee split for tidewater/quill-rpc over the last 24 hours">
+        <div class="panel-hd">
+          <span class="av av-sm" data-av="tidewater/quill-rpc" data-tone="ink"></span>
+          <h2><span class="faint">tidewater/</span>quill-rpc</h2>
+          <span class="tag tag-window" style="margin-left:auto">Contributor window</span>
+        </div>
+        <div class="router-body">
+          <div class="router-file">
+            <div class="router-file-hd"><span class="mono">.katki.json</span><span>main &middot; 3f9a2c1</span></div>
+<pre class="code" aria-label=".katki.json excerpt"><span class="k">{</span>
+  <span class="n">"contributors"</span>: [
+    { <span class="n">"github"</span>: <span class="s">"mira-k"</span>,
+      <span class="n">"wallet"</span>: <span class="s">"0x8c1F…4a2E"</span>,
+      <span class="n">"weight"</span>: <span class="k">0.312</span> },
+    { <span class="n">"github"</span>: <span class="s">"dvasquez"</span>,
+      <span class="n">"wallet"</span>: <span class="s">"0x2b7D…e019"</span>,
+      <span class="n">"weight"</span>: <span class="k">0.184</span> },
+    <span class="c">// 10 more</span>
+  ]
+<span class="k">}</span></pre>
+          </div>
+          <div class="router-graph" data-router></div>
+        </div>
+        <div class="router-foot">
+          <span>Trade fees, last 24 h <b class="num" data-router-total>0.0611 ETH</b></span>
+          <button class="btn btn-sm btn-quiet" type="button" data-router-pause aria-pressed="false">Pause</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How it works: one curve, three phases aligned under it -->
+  <section class="section" id="how">
+    <div class="wrap">
+      <div class="section-hd split">
+        <h2 class="h2">How a launch moves along its curve</h2>
+        <p class="prose">A launch is one bonding curve. Contributors get the first stretch of it, then it opens to everyone. When the curve fills, the token graduates to a liquidity pool.</p>
+      </div>
+      <div class="phases">
+        <div class="phase-curve chart" data-phase-curve aria-hidden="true"></div>
+        <ol class="phase-list">
+          <li class="phase">
+            <span class="phase-n">1</span>
+            <div>
+              <h3>Commit .katki.json</h3>
+              <p>List contributor wallets and their commit share in one file at the repo root. Tributary reads it from the default branch at launch, so the split is public before anyone buys.</p>
+            </div>
+          </li>
+          <li class="phase">
+            <span class="phase-n">2</span>
+            <div>
+              <h3>Contributors buy first</h3>
+              <p data-assumed>For the first 24 hours only wallets in the file can buy. The people who wrote the code get the lowest prices on the curve.</p>
+            </div>
+          </li>
+          <li class="phase">
+            <span class="phase-n">3</span>
+            <div>
+              <h3>Anyone trades, then it graduates</h3>
+              <p data-assumed>After the window the curve is public. At 4.20 ETH raised, liquidity moves to a pool and trading continues there. Fees keep flowing to contributors.</p>
+            </div>
+          </li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- Live launches: dense ledger, not cards -->
+  <section class="section" id="live">
+    <div class="wrap">
+      <div class="live-hd">
+        <h2 class="h2">Launches on testnet now</h2>
+        <a class="link" href="explore.html">See all 12 launches</a>
+      </div>
+      <div class="panel">
+        <table class="ledger stack launches">
+          <thead><tr><th>Repository</th><th>Token</th><th>Curve</th><th class="r">To graduation</th><th class="r">Contributors</th><th class="r">Fees, 24 h</th><th>Status</th></tr></thead>
+          <tbody data-live-rows></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Fees: rules on the left, the payout ledger on the right -->
+  <section class="section" id="fees">
+    <div class="wrap fees-grid">
+      <div>
+        <h2 class="h2">Where the trading fee goes</h2>
+        <p class="prose" style="margin-top:16px" data-assumed>1% of every buy and sell is set aside for the repository. It is split across the wallets in .katki.json by commit share, and each contributor claims their part when they want it.</p>
+        <ul class="rules">
+          <li><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 10.5 8 14.5 16 5.5"/></svg><span><b>Split by commit share.</b> The weights come from the file you committed, so anyone can check them against the repo history.</span></li>
+          <li><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="4" y="9" width="12" height="8" rx="1.5"/><path d="M7 9V6.5a3 3 0 0 1 6 0V9"/></svg><span data-assumed><b>Founder share stays locked.</b> 5% of supply is locked for 180 days. The unlock date and the contract sit on every launch page.</span></li>
+          <li><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M10 3v14M5 12l5 5 5-5"/></svg><span><b>No one holds the fees in between.</b> They accrue in the launch contract until each contributor claims to their own wallet.</span></li>
+        </ul>
+      </div>
+      <div class="panel">
+        <div class="panel-hd"><h3>Recent fee payouts</h3><span class="faint" style="margin-left:auto;font-size:13px">All launches</span></div>
+        <ul class="feed">
+          <li><span class="av" data-av="mira-k"></span><div style="min-width:0"><div class="who">mira-k</div><div class="why">QRPC &middot; 31.2% of a 0.0420 ETH fee pool</div></div><div class="amt">0.0131 ETH<span class="ago">2 min ago</span></div></li>
+          <li><span class="av" data-av="okeefe-j"></span><div style="min-width:0"><div class="who">okeefe-j</div><div class="why">TRCE &middot; 14.0% of a 0.1100 ETH fee pool</div></div><div class="amt">0.0154 ETH<span class="ago">6 min ago</span></div></li>
+          <li><span class="av" data-av="b-castellanos"></span><div style="min-width:0"><div class="who">b-castellanos</div><div class="why">GASR &middot; 22.5% of a 0.0880 ETH fee pool</div></div><div class="amt">0.0198 ETH<span class="ago">11 min ago</span></div></li>
+          <li><span class="av" data-av="nadia-r"></span><div style="min-width:0"><div class="who">nadia-r</div><div class="why">SMT &middot; 40.3% of a 0.0310 ETH fee pool</div></div><div class="amt">0.0125 ETH<span class="ago">18 min ago</span></div></li>
+          <li><span class="av" data-av="dvasquez"></span><div style="min-width:0"><div class="who">dvasquez</div><div class="why">QRPC &middot; 18.4% of a 0.0420 ETH fee pool</div></div><div class="amt">0.0077 ETH<span class="ago">25 min ago</span></div></li>
+          <li><span class="av" data-av="wkim"></span><div style="min-width:0"><div class="who">wkim</div><div class="why">RPLY &middot; 9.1% of a 0.0640 ETH fee pool</div></div><div class="amt">0.0058 ETH<span class="ago">31 min ago</span></div></li>
+        </ul>
+        <dl class="totals">
+          <div><dt>Claimed, 7 days</dt><dd>3.9120 ETH</dd></div>
+          <div><dt>Wallets paid</dt><dd>119</dd></div>
+          <div><dt>Live launches</dt><dd>12</dd></div>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <!-- Close -->
+  <section class="close">
+    <div class="wrap close-grid">
+      <div>
+        <h2 class="h2">Your repo already has contributors. Launch it with them.</h2>
+        <p class="prose" style="margin-top:16px">Launching takes four steps and one transaction. If the repo has no .katki.json yet, the launch form shows you how to write one.</p>
+        <div class="hero-cta"><a class="btn btn-primary btn-lg" href="create.html">Launch your repo</a></div>
+      </div>
+      <div class="panel">
+        <div class="panel-hd"><h3>Before you launch</h3></div>
+        <ul class="rules" style="margin:0;padding:16px">
+          <li><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 10.5 8 14.5 16 5.5"/></svg><span>A public GitHub repository you maintain</span></li>
+          <li><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 10.5 8 14.5 16 5.5"/></svg><span><span class="mono">.katki.json</span> on the default branch, weights adding up to 1</span></li>
+          <li><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 10.5 8 14.5 16 5.5"/></svg><span>A wallet on GIWA Sepolia with test ETH for gas</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="ftr">
+  <div class="wrap">
+    <div class="ftr-grid">
+      <div>
+        <a class="brand" href="index.html" aria-label="Tributary home"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2.5 5.25H8a4 4 0 0 1 4 4M21.5 5.25H16a4 4 0 0 0-4 4" stroke="currentColor" stroke-width="2.5"/><path class="stem" d="M12 8.75V21" stroke="currentColor" stroke-width="3.5"/></svg>Tributary</a>
+        <p style="margin-top:8px;max-width:34ch">Token launches that pay open-source contributors. Built on the Ammora protocol.</p>
+      </div>
+      <div><h2>Product</h2><ul><li><a href="explore.html">Launches</a></li><li><a href="create.html">Launch a repo</a></li><li><a href="create.html#katki">.katki.json format</a></li></ul></div>
+      <div><h2>Protocol</h2><ul><li><a href="#">Ammora docs</a></li><li><a href="#">Contracts</a></li><li><a href="#">GIWA Sepolia faucet</a></li></ul></div>
+      <div><h2>Elsewhere</h2><ul><li><a href="#">GitHub</a></li><li><a href="#">X</a></li></ul></div>
+    </div>
+    <div class="ftr-base"><span>Testnet software. Tokens on GIWA Sepolia have no market value.</span></div>
+    <div class="proto" aria-label="Prototype states"><span>Prototype states:</span>
+      <a href="?wallet=disconnected">Wallet not connected</a><a href="?wallet=connected">Connected</a><a href="?wallet=wrong">Wrong network</a><a href="?state=loading">Loading</a><a href="?theme=dark">Dark</a><a href="?theme=light">Light</a>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/app.js"></script>
+<script src="assets/home.js"></script>
+</body>
+</html>

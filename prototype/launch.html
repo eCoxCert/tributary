@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QRPC · tidewater/quill-rpc · Tributary</title>
+<meta name="description" content="Quill (QRPC): bonding curve, contributor window, contributor fee split and founder lock.">
+<meta property="og:title" content="QRPC · tidewater/quill-rpc · Tributary">
+<meta property="og:description" content="Quill (QRPC): bonding curve, contributor window, contributor fee split and founder lock.">
+<meta name="theme-color" content="#f5f6f5" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f1214" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="../brand/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Hanken+Grotesk:wght@400..800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/tokens.css">
+<link rel="stylesheet" href="assets/app.css">
+<script>try{var t=new URLSearchParams(location.search).get("theme")||localStorage.getItem("trib-theme")||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body data-default-wallet="connected">
+<a class="skip" href="#main">Skip to content</a>
+
+<div class="testnet"><div class="wrap"><span><b>Testnet.</b> Tributary runs on GIWA Sepolia. Every figure in this prototype is sample data.</span></div></div>
+
+<header class="hdr">
+  <div class="wrap">
+    <a class="brand" href="index.html" aria-label="Tributary home">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2.5 5.25H8a4 4 0 0 1 4 4M21.5 5.25H16a4 4 0 0 0-4 4" stroke="currentColor" stroke-width="2.5"/><path class="stem" d="M12 8.75V21" stroke="currentColor" stroke-width="3.5"/></svg>
+      Tributary
+    </a>
+    <nav class="nav" aria-label="Main">
+      <a href="explore.html" aria-current="page">Launches</a>
+      <a href="create.html">Launch a repo</a>
+      <a href="create.html#katki">.katki.json</a>
+      <a href="#">Docs</a>
+    </nav>
+    <div class="hdr-end">
+      <span class="netpill"><i></i><span>GIWA Sepolia</span></span>
+      <button class="iconbtn" type="button" data-theme-toggle aria-label="Switch to dark theme">
+        <svg class="theme-light-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M16.5 12.2A7 7 0 0 1 7.8 3.5a7 7 0 1 0 8.7 8.7Z"/></svg>
+        <svg class="theme-dark-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/><path d="M10 1.5v2M10 16.5v2M1.5 10h2M16.5 10h2M4 4l1.4 1.4M14.6 14.6 16 16M4 16l1.4-1.4M14.6 5.4 16 4"/></svg>
+      </button>
+      <span data-wallet-slot></span>
+      <button class="iconbtn menu-btn" type="button" aria-expanded="false" aria-label="Open menu">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 6h14M3 10h14M3 14h14"/></svg>
+      </button>
+    </div>
+  </div>
+  <nav class="mnav" aria-label="Mobile">
+    <a href="explore.html" aria-current="page">Launches</a>
+    <a href="create.html">Launch a repo</a>
+    <a href="create.html#katki">.katki.json</a>
+    <a href="#">Docs</a>
+  </nav>
+</header>
+
+<div class="wrap" data-show-wallet="wrong" hidden style="padding-top:16px">
+  <div class="banner banner-warn" role="status">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M10 2.5 18 17H2L10 2.5Z"/><path d="M10 8v4M10 14.2v.3"/></svg>
+    <div>Your wallet is on Ethereum Sepolia. Tributary runs on GIWA Sepolia.</div>
+    <button class="btn btn-sm" type="button">Switch network</button>
+  </div>
+</div>
+
+<main id="main" class="page">
+  <div class="wrap">
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="explore.html">Launches</a><span aria-hidden="true">/</span><span>tidewater/quill-rpc</span></nav>
+
+    <div class="banner banner-err" role="alert" data-show-state="error" hidden style="margin-bottom:24px">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="10" cy="10" r="7.5"/><path d="M10 6v4.5M10 13.2v.3"/></svg>
+      <div><b>QRPC did not load.</b> The GIWA Sepolia RPC returned an error for the launch contract. Your funds are not affected; nothing was sent.</div>
+      <a class="btn btn-sm" href="launch.html">Try again</a>
+    </div>
+
+    <header class="l-head">
+      <div class="l-title">
+        <span class="av" data-av="tidewater/quill-rpc" data-tone="ink"></span>
+        <h1>Quill <span>QRPC</span></h1>
+        <span class="tag tag-window">Contributor window</span>
+      </div>
+      <div class="l-meta">
+        <a href="#"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 .2a8 8 0 0 0-2.5 15.6c.4 0 .5-.2.5-.4v-1.4c-2.2.5-2.7-1-2.7-1-.4-.9-.9-1.2-.9-1.2-.7-.5.1-.5.1-.5.8.1 1.2.8 1.2.8.7 1.3 1.9.9 2.4.7 0-.5.3-.9.5-1.1-1.8-.2-3.6-.9-3.6-4 0-.9.3-1.6.8-2.1-.1-.2-.4-1 .1-2.1 0 0 .7-.2 2.2.8a7.6 7.6 0 0 1 4 0c1.5-1 2.2-.8 2.2-.8.4 1.1.2 1.9.1 2.1.5.6.8 1.3.8 2.1 0 3.1-1.9 3.8-3.6 4 .3.3.6.8.6 1.5v2.2c0 .2.1.5.6.4A8 8 0 0 0 8 .2Z"/></svg>tidewater/quill-rpc</a>
+        <span class="addr">Token <span class="mono">0x7a3f…c91e</span><button class="copy" type="button" data-copy="0x7a3f0000000000000000000000000000c91e" aria-label="Copy token address"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><rect x="5" y="5" width="9" height="9" rx="1.5"/><path d="M11 5V3.5A1.5 1.5 0 0 0 9.5 2h-6A1.5 1.5 0 0 0 2 3.5v6A1.5 1.5 0 0 0 3.5 11H5"/></svg></button></span>
+        <span>Launched <span class="num" data-launched>17 Nov 2026, 01:38 UTC</span></span>
+        <span>TypeScript &middot; 2.1k stars</span>
+      </div>
+      <div class="price-row" data-show-state="ready error">
+        <span class="price-big" data-price>3.53 gwei</span>
+        <span class="pos num" data-change>+126.2% since launch</span>
+        <span class="faint num" data-mcap>Market cap 3.53 ETH</span>
+      </div>
+      <div class="price-row" data-show-state="loading" hidden><span class="sk" style="width:180px;height:32px"></span><span class="sk" style="width:120px"></span></div>
+    </header>
+
+    <div class="l-grid">
+      <section class="panel a-chart" aria-labelledby="curve-h">
+        <div class="panel-hd">
+          <h2 id="curve-h">Bonding curve</h2>
+          <div class="legend" aria-hidden="true"><span><i class="h"></i>Bought in contributor window</span><span><i class="l"></i>Price</span></div>
+        </div>
+        <div class="panel-bd">
+          <div class="chart" data-curve data-show-state="ready error"></div>
+          <div data-show-state="loading" hidden><span class="sk" style="height:260px;border-radius:7px"></span></div>
+        </div>
+        <dl class="curve-stats">
+          <div><dt>Raised</dt><dd data-raised>0.7560 of 4.20 ETH</dd></div>
+          <div><dt>Sold on curve</dt><dd data-sold>313.6M of 800M</dd></div>
+          <div><dt>To graduation</dt><dd data-left>3.4440 ETH</dd></div>
+          <div><dt>Holders</dt><dd>12</dd></div>
+        </dl>
+      </section>
+
+      <aside class="l-side" aria-label="Trade">
+        <section class="panel window" aria-labelledby="win-h">
+          <div class="window-top"><h2 id="win-h" class="label" style="color:var(--ink)">Opens to everyone in</h2><span class="tag tag-window">Contributors only</span></div>
+          <div class="clock" role="timer" aria-live="off" data-clock>
+            <div><b data-h>14</b><span>hours</span></div>
+            <div><b data-m>22</b><span>minutes</span></div>
+            <div><b data-s>05</b><span>seconds</span></div>
+          </div>
+          <p>Only the 12 wallets in <span class="mono">.katki.json</span> can buy until <span class="num" data-opens>18 Nov 2026, 01:38 UTC</span>. Selling is open to every holder.</p>
+        </section>
+
+        <section class="panel trade" aria-label="Buy or sell QRPC">
+          <div class="panel-bd" style="padding-bottom:0">
+            <div class="seg" role="tablist" aria-label="Trade side">
+              <button type="button" role="tab" aria-selected="true" data-side="buy">Buy</button>
+              <button type="button" role="tab" aria-selected="false" data-side="sell">Sell</button>
+            </div>
+          </div>
+          <div class="trade-bd">
+            <div class="amount">
+              <div class="amount-row"><label for="amt" data-amt-label>You pay</label><span class="num" data-bal>Balance 0.4120 ETH</span></div>
+              <div class="input-group"><input class="input" id="amt" inputmode="decimal" value="0.05" autocomplete="off" data-amt><span class="affix" data-unit>ETH</span></div>
+              <div class="chips" data-chips>
+                <button class="chip" type="button" data-v="0.01">0.01</button>
+                <button class="chip" type="button" data-v="0.05">0.05</button>
+                <button class="chip" type="button" data-v="0.1">0.1</button>
+                <button class="chip" type="button" data-v="max">Max</button>
+              </div>
+            </div>
+            <div class="receive"><span data-recv-label>You receive about</span><b data-recv>13.95M QRPC</b></div>
+            <dl class="kv">
+              <div><dt>Price after trade</dt><dd data-after>3.66 gwei</dd></div>
+              <div><dt data-assumed>Trading fee, 1%</dt><dd data-fee>0.0005 ETH</dd></div>
+              <div><dt>Fee goes to</dt><dd>12 contributors</dd></div>
+            </dl>
+
+            <div data-show-wallet="connected">
+              <button class="btn btn-primary btn-lg btn-block" type="button" data-cta>Buy QRPC</button>
+              <p class="trade-note" style="margin-top:12px">You are in <span class="mono">.katki.json</span> as <b>haru-n</b>, so you can buy during the contributor window.</p>
+            </div>
+            <div data-show-wallet="outsider" hidden>
+              <button class="btn btn-lg btn-block" type="button" disabled>Buying opens in <span class="num" data-clock-inline>14:22:05</span></button>
+              <p class="trade-note" style="margin-top:12px">This wallet, <span class="mono">0x91aC…07d5</span>, is not in tidewater/quill-rpc’s <span class="mono">.katki.json</span>. You can buy when the window closes.</p>
+            </div>
+            <div data-show-wallet="disconnected" hidden>
+              <a class="btn btn-ink btn-lg btn-block" href="?wallet=connected">Connect wallet</a>
+              <p class="trade-note" style="margin-top:12px">Connect to see whether your wallet is in this repo’s <span class="mono">.katki.json</span>.</p>
+            </div>
+            <div data-show-wallet="wrong" hidden>
+              <button class="btn btn-warn btn-lg btn-block" type="button">Switch to GIWA Sepolia</button>
+              <p class="trade-note" style="margin-top:12px">Your wallet is on Ethereum Sepolia. QRPC trades only on GIWA Sepolia.</p>
+            </div>
+          </div>
+        </section>
+      </aside>
+
+      <section class="panel a-contrib" aria-labelledby="contrib-h">
+        <div class="panel-hd">
+          <h2 id="contrib-h">Contributors and fees</h2>
+          <span class="faint" style="margin-left:auto;font-size:13px">From <span class="mono">.katki.json</span> at 3f9a2c1</span>
+        </div>
+        <table class="ledger stack contrib">
+          <thead><tr><th>Contributor</th><th>Commit share</th><th class="r">Commits</th><th class="r">Fees earned</th><th class="r">Unclaimed</th><th class="r"><span class="visually-hidden">Action</span></th></tr></thead>
+          <tbody data-contrib></tbody>
+        </table>
+      </section>
+
+      <section class="panel a-lock" aria-labelledby="lock-h">
+        <div class="panel-hd">
+          <h2 id="lock-h">Founder allocation</h2>
+          <span class="tag" style="margin-left:auto">Locked</span>
+        </div>
+        <div class="lock">
+          <p class="muted" style="font-size:14px;max-width:62ch" data-assumed>5% of supply was set aside for the maintainer and sent to a lock contract at launch. It cannot be moved before the unlock date.</p>
+          <div>
+            <div class="lock-bar" role="progressbar" aria-label="Lock period elapsed" aria-valuemin="0" aria-valuemax="100" aria-valuenow="1" data-lockbar><i style="width:1%"></i></div>
+            <div class="lock-dates" style="margin-top:8px"><span data-lock-start>17 Nov 2026</span><span data-lock-left>180 days left</span><span data-lock-end>16 May 2027</span></div>
+          </div>
+          <dl class="kv">
+            <div><dt>Locked amount</dt><dd>50,000,000 QRPC</dd></div>
+            <div><dt>Share of supply</dt><dd>5.0%</dd></div>
+            <div><dt>Unlocks</dt><dd data-unlock>All at once, 16 May 2027</dd></div>
+            <div><dt>Beneficiary</dt><dd><span class="mono">0x5e1d…a8c3</span></dd></div>
+            <div><dt>Lock contract</dt><dd><span class="addr"><span class="mono">0x2f90…7b14</span><button class="copy" type="button" data-copy="0x2f900000000000000000000000000000007b14" aria-label="Copy lock contract address"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><rect x="5" y="5" width="9" height="9" rx="1.5"/><path d="M11 5V3.5A1.5 1.5 0 0 0 9.5 2h-6A1.5 1.5 0 0 0 2 3.5v6A1.5 1.5 0 0 0 3.5 11H5"/></svg></button></span></dd></div>
+          </dl>
+          <a class="link" href="#" style="font-size:14px">View the lock contract on the GIWA Sepolia explorer</a>
+        </div>
+      </section>
+    </div>
+  </div>
+</main>
+
+<footer class="ftr">
+  <div class="wrap">
+    <div class="ftr-grid">
+      <div>
+        <a class="brand" href="index.html" aria-label="Tributary home"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2.5 5.25H8a4 4 0 0 1 4 4M21.5 5.25H16a4 4 0 0 0-4 4" stroke="currentColor" stroke-width="2.5"/><path class="stem" d="M12 8.75V21" stroke="currentColor" stroke-width="3.5"/></svg>Tributary</a>
+        <p style="margin-top:8px;max-width:34ch">Token launches that pay open-source contributors. Built on the Ammora protocol.</p>
+      </div>
+      <div><h2>Product</h2><ul><li><a href="explore.html">Launches</a></li><li><a href="create.html">Launch a repo</a></li><li><a href="create.html#katki">.katki.json format</a></li></ul></div>
+      <div><h2>Protocol</h2><ul><li><a href="#">Ammora docs</a></li><li><a href="#">Contracts</a></li><li><a href="#">GIWA Sepolia faucet</a></li></ul></div>
+      <div><h2>Elsewhere</h2><ul><li><a href="#">GitHub</a></li><li><a href="#">X</a></li></ul></div>
+    </div>
+    <div class="ftr-base"><span>Testnet software. Tokens on GIWA Sepolia have no market value.</span></div>
+    <div class="proto" aria-label="Prototype states"><span>Prototype states:</span>
+      <a href="?wallet=connected">Contributor wallet</a><a href="?wallet=outsider">Not a contributor</a><a href="?wallet=disconnected">Wallet not connected</a><a href="?wallet=wrong">Wrong network</a><a href="?state=loading">Loading</a><a href="?state=error">RPC error</a><a href="?theme=dark">Dark</a><a href="?theme=light">Light</a>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/app.js"></script>
+<script src="assets/launch.js"></script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 132 28" role="img" aria-labelledby="t">
+  <title id="t">Tributary</title>
+  <!-- Editable source: wordmark set in Hanken Grotesk 650, tracking -0.02em. Not yet outlined to paths. -->
+  <g fill="none" transform="translate(0 2)"><path d="M2.5 5.25H8a4 4 0 0 1 4 4M21.5 5.25H16a4 4 0 0 0-4 4" stroke="#121619" stroke-width="2.5"/><path d="M12 8.75V21" stroke="#0a6670" stroke-width="3.5"/></g>
+  <text x="31" y="20.5" fill="#121619" font-family="'Hanken Grotesk', ui-sans-serif, system-ui, sans-serif" font-weight="650" font-size="19" letter-spacing="-0.38">Tributary</text>
+</svg>
