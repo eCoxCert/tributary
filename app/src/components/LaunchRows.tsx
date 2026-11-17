@@ -58,7 +58,6 @@ export function LaunchRow({ rec, q, debug }: { rec: LaunchRecord; q: UseQueryRes
   const nav = useNavigate();
   const to = `/launch/${rec.token}${debug ? "?all=1" : ""}`;
   const title = rec.meta?.repo ?? rec.token;
-  const [owner, name] = title.includes("/") ? (title.split("/") as [string, string]) : ["", title];
 
   if (q.isPending) {
     return (
@@ -98,6 +97,7 @@ export function LaunchRow({ rec, q, debug }: { rec: LaunchRecord; q: UseQueryRes
     );
   }
   const m = rowModel(q.data);
+  const [owner2, name2] = m.title.includes("/") ? (m.title.split("/") as [string, string]) : ["", m.title];
   return (
     <tr className="is-link" onClick={(e) => { if (!(e.target as HTMLElement).closest("a,button")) nav(to); }}>
       <td className="c-repo">
@@ -105,8 +105,8 @@ export function LaunchRow({ rec, q, debug }: { rec: LaunchRecord; q: UseQueryRes
           <Av seed={title} tone="ink" />
           <div style={{ minWidth: 0 }}>
             <Link className="repo-name" to={to}>
-              {owner ? <span>{owner}/</span> : null}
-              {name}
+              {owner2 ? <span>{owner2}/</span> : null}
+              {name2}
             </Link>
             <div className="repo-sub">{m.sub}</div>
           </div>

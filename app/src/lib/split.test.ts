@@ -18,6 +18,9 @@ describe("commitsToBps", () => {
     // 5/3/3 of 11: floor 4545, 2727, 2727 = 9999 -> largest (first) gets +1
     expect(commitsToBps([5, 3, 3])).toEqual([4546, 2727, 2727]);
   });
+  it("floors each share, so the smaller one is not rounded up", () => {
+    expect(commitsToBps([1, 6])).toEqual([1428, 8572]);
+  });
   it("never produces a zero share", () => {
     const bps = commitsToBps([100000, 1]);
     expect(Math.min(...bps)).toBeGreaterThanOrEqual(1);

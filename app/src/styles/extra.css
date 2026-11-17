@@ -58,3 +58,8 @@
   .a-lock { grid-column: 1; grid-row: 4; }
   .l-side { grid-row: 1 / span 4; }
 }
+
+.slip .seg { flex-wrap: nowrap; flex: none; width: auto; }
+.slip .seg button { flex: none; min-width: 44px; }
+.repo > div { min-width: 0; }
+.repo-name { display: block; max-width: 100%; }
