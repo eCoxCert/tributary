@@ -8,7 +8,7 @@ import { decodeTributaryMetadata, type TributaryMeta } from "../lib/metadata";
 import { getContributors, getRepoInfo, parseRepoInput, type RepoInfo } from "../lib/github";
 import type { KatkiFile, RepoContributor } from "../lib/katki";
 import { readKatkiState } from "../lib/katkiCheck";
-import type { KatkiState } from "../lib/verify";
+import type { KatkiState, RepoCheck } from "../lib/verify";
 import { readAllocation, type AllocationRead } from "../lib/allocation";
 
 const ZERO = "0x0000000000000000000000000000000000000000";
@@ -89,6 +89,8 @@ export type KatkiInfo = {
   notes: string[];
   /** What .katki.json looked like at the recorded commit (404 / invalid / unreachable / ok). */
   katki: KatkiState;
+  provenance: RepoCheck;
+  handles: RepoCheck;
 };
 
 /** Handles and commit counts for a launch's recipients. Best effort: GitHub may be rate limited. */
@@ -99,9 +101,9 @@ export function useKatkiInfo(meta: TributaryMeta | null) {
     staleTime: 10 * 60_000,
     retry: 0,
     queryFn: async () => {
-      if (import.meta.env.DEV && fx()) return (await import("../fixtures/tributary")).fixtureInfo(fx() as string);
+      if (import.meta.env.DEV && fx()) return (await import("../fixtures/tributary")).fixtureInfoAsync(fx() as string);
       const ref = parseRepoInput((meta as TributaryMeta).repo);
-      if (!ref) return { file: null, history: null, repo: null, notes: ["The repository name in the launch metadata is not valid."], katki: { state: "invalid" } as KatkiState };
+      if (!ref) return { file: null, history: null, repo: null, notes: ["The repository name in the launch metadata is not valid."], katki: { state: "invalid" } as KatkiState, provenance: { state: "ok" } as RepoCheck, handles: { state: "ok" } as RepoCheck };
       const notes: string[] = [];
       let file: KatkiFile | null = null;
       let history: RepoContributor[] | null = null;
@@ -120,7 +122,7 @@ export function useKatkiInfo(meta: TributaryMeta | null) {
       } catch {
         /* optional */
       }
-      return { file, history, repo, notes, katki: kr.state };
+      return { file, history, repo, notes, katki: kr.state, provenance: kr.provenance, handles: kr.handles };
     },
   });
 }

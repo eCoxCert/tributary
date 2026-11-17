@@ -13,22 +13,23 @@ const vault = (over: Partial<VaultSnapshot> = {}): VaultSnapshot => ({
 });
 const base = { meta, partnerRecipient: A("a"), creatorShareOfNonProtocolBps: 0, creator: A("b"), quoteToken: A("4") };
 const ok = { state: "ok" as const, wallets: [A("1"), A("2")] };
+const fine = { provenance: { state: "ok" as const }, handles: { state: "ok" as const } };
 
 describe("card verification", () => {
   it("verifies a consistent card", () => {
-    expect(verifyLaunch({ ...base, vault: vault(), katki: ok }).status).toBe("verified");
+    expect(verifyLaunch({ ...base, vault: vault(), katki: ok, ...fine }).status).toBe("verified");
   });
   it("a card whose vault wallets are not in .katki.json is a mismatch", () => {
-    expect(verifyLaunch({ ...base, vault: vault(), katki: { state: "ok", wallets: [A("1")] } }).status).toBe("mismatch");
+    expect(verifyLaunch({ ...base, vault: vault(), katki: { state: "ok", wallets: [A("1")] }, ...fine }).status).toBe("mismatch");
   });
   it("a card whose vault is not from the factory is a mismatch", () => {
-    expect(verifyLaunch({ ...base, vault: vault({ fromFactory: false }), katki: ok }).status).toBe("mismatch");
+    expect(verifyLaunch({ ...base, vault: vault({ fromFactory: false }), katki: ok, ...fine }).status).toBe("mismatch");
   });
   it("a card whose vault pays another token is a mismatch", () => {
-    expect(verifyLaunch({ ...base, vault: vault({ token: A("7") }), katki: ok }).status).toBe("mismatch");
+    expect(verifyLaunch({ ...base, vault: vault({ token: A("7") }), katki: ok, ...fine }).status).toBe("mismatch");
   });
   it("a card is unverifiable (not verified) while GitHub cannot be reached", () => {
-    expect(verifyLaunch({ ...base, vault: vault(), katki: { state: "unavailable", reason: "network" } }).status).toBe("unverifiable");
+    expect(verifyLaunch({ ...base, vault: vault(), katki: { state: "unavailable", reason: "network" }, ...fine }).status).toBe("unverifiable");
   });
 });
 

@@ -5,6 +5,7 @@ import { Banner, SkeletonRows } from "../components/ui";
 import { LaunchRow, LaunchesHead, isListed, statusOf } from "../components/LaunchRows";
 import { useCards, useDiscovery, type Card } from "../hooks/useChainData";
 import { fmt } from "../lib/format";
+import { listState, plural } from "../lib/visibility";
 
 type Filter = "all" | "public" | "grad";
 type Sort = "new" | "close" | "fees" | "contrib";
@@ -23,8 +24,9 @@ export function Explore() {
   const recs = d.launches.slice(0, limit);
   const queries = useCards(recs);
   const cards: (Card | undefined)[] = queries.map((q) => q.data);
-  const loaded = (cards.filter(Boolean) as Card[]).filter((c) => isListed(c, debug));
   const settled = cards.filter(Boolean).length;
+  const visibleCards = (cards.filter(Boolean) as Card[]).filter((c) => isListed(c, debug));
+  const loaded = visibleCards.filter((c) => c.verified?.status !== "unverifiable"); // unchecked launches add no contributor or fee figures
 
   const view = useMemo(() => {
     const t = term.trim().toLowerCase();
@@ -59,7 +61,9 @@ export function Explore() {
   const people = loaded.reduce((a, c) => a + (c.vault?.recipients.length ?? 0), 0);
   const fees = loaded.reduce((a, c) => a + (c.vault ? c.vault.totalFunded + c.vault.pendingInFeeVault : 0n), 0n);
 
-  const noResults = !d.scanning && !d.error && d.launches.length === 0;
+  const visibleItems = recs.map((rec, i) => ({ rec, card: cards[i] })).filter((x) => !x.card || isListed(x.card, debug));
+  const state = listState({ scanning: d.scanning, error: !!d.error, anyPending: queries.some((q) => q.isPending), visible: visibleCards.length, shown: view.length, rawCount: d.launches.length });
+  const filtering = term.trim() !== "" || filter !== "all";
   const stat = (v: string | number) => (allRead ? v : "–");
   const scannedDays = d.head !== null && d.scannedFrom !== null ? Math.max(0, Number(d.head - d.scannedFrom) / 86400) : null;
 
@@ -108,10 +112,12 @@ export function Explore() {
         )}
 
         <div className="panel">
-          {noResults ? (
-            <table className="ledger stack launches">
-              <LaunchesHead />
-              <tbody>
+          <table className="ledger stack launches" aria-describedby="count">
+            <LaunchesHead />
+            <tbody>
+              {state === "loading" ? (
+                <SkeletonRows rows={6} cols={7} />
+              ) : state === "empty" ? (
                 <tr>
                   <td className="full" colSpan={7}>
                     <div className="notice notice-c">
@@ -125,40 +131,32 @@ export function Explore() {
                     </div>
                   </td>
                 </tr>
-              </tbody>
-            </table>
-          ) : (
-            <>
-              <table className="ledger stack launches" aria-describedby="count">
-                <LaunchesHead />
-                <tbody>
-                  {d.scanning && recs.length === 0 ? (
-                    <SkeletonRows rows={6} cols={7} />
-                  ) : (
-                    view.map((it) => <LaunchRow key={it.rec.curve} rec={it.rec} q={it.q} debug={debug} />)
-                  )}
-                </tbody>
-              </table>
-              {recs.length > 0 && view.length === 0 && (
-                <div className="notice notice-c">
-                  <h3>No launches match {term.trim() ? `“${term.trim()}”` : "this filter"}</h3>
-                  <p>Search looks at the repository name, the token name and symbol, and the token address. Check the spelling, or clear the search to see all {recs.length} launches.</p>
-                  <button className="btn btn-sm" type="button" onClick={() => { setTerm(""); setFilter("all"); }}>Clear search</button>
-                </div>
+              ) : state === "no-match" ? (
+                <tr>
+                  <td className="full" colSpan={7}>
+                    <div className="notice notice-c">
+                      <h3>No launches match {term.trim() ? `“${term.trim()}”` : "this filter"}</h3>
+                      <p>Search looks at the repository name, the token name and symbol, and the token address. Check the spelling{filtering ? ", or clear the search to see all " + plural(visibleCards.length, "launch") : ""}.</p>
+                      {filtering && <button className="btn btn-sm" type="button" onClick={() => { setTerm(""); setFilter("all"); }}>Clear search</button>}
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                view.map((it) => <LaunchRow key={it.rec.curve} rec={it.rec} q={it.q} debug={debug} />)
               )}
-            </>
-          )}
+            </tbody>
+          </table>
         </div>
 
         <p className="hint" id="count" style={{ marginTop: 12 }} title={d.scannedFrom !== null ? `Blocks ${d.scannedFrom} to ${d.head}` : undefined}>
           {d.scanning && recs.length === 0
             ? "Reading launches from GIWA Sepolia…"
-            : `Showing ${view.length} of ${d.launches.length} launches${d.source === "chain" && scannedDays !== null ? ` from the last ${scannedDays.toFixed(1)} days` : ""}.`}
+            : `Showing ${view.length} of ${plural(visibleItems.length, "launch")}${d.source === "chain" && scannedDays !== null ? ` from the last ${scannedDays.toFixed(1)} days` : ""}.`}
           {d.source === "data-api" ? " Source: Ammora Data API." : ""}
           {d.scanning && recs.length > 0 ? " Still scanning…" : ""}
         </p>
         <div className="scan-actions">
-          {d.launches.length > limit && <button className="btn btn-sm" type="button" onClick={() => setLimit((l) => l + PAGE)}>Show more launches</button>}
+          {visibleItems.length >= limit && d.launches.length > limit && <button className="btn btn-sm" type="button" onClick={() => setLimit((l) => l + PAGE)}>Show more launches</button>}
           {d.source === "chain" && !d.scanning && <button className="btn btn-sm" type="button" onClick={d.extend}>Look further back</button>}
         </div>
       </div>

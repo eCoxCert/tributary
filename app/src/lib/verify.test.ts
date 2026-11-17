@@ -14,6 +14,8 @@ const good = (): VerifyInput => ({
   expectedToken: W,
   vault: { owner: C, token: W, base: W, fromFactory: true, recipients: [{ recipient: R1, share: 6000n }, { recipient: R2, share: 4000n }] },
   katki: { state: "ok", wallets: [R1, R2] },
+  provenance: { state: "ok" },
+  handles: { state: "ok" },
 });
 const status = (i: VerifyInput) => verifyTributaryLaunch(i).status;
 
@@ -59,6 +61,16 @@ describe("verifyTributaryLaunch", () => {
   it("unverifiable, never verified: GitHub unavailable or vault unreadable", () => {
     expect(status({ ...good(), katki: { state: "unavailable", reason: "rate limit" } })).toBe("unverifiable");
     expect(status({ ...good(), vault: null })).toBe("unverifiable");
+  });
+  it("mismatch: commit is not on the default branch (a fork's commit)", () => {
+    expect(status({ ...good(), provenance: { state: "mismatch", detail: "fork" } })).toBe("mismatch");
+  });
+  it("mismatch: a listed handle is not a repository contributor", () => {
+    expect(status({ ...good(), handles: { state: "mismatch", detail: "ghost is not a contributor" } })).toBe("mismatch");
+  });
+  it("unverifiable: provenance or handles could not be checked", () => {
+    expect(status({ ...good(), provenance: { state: "unavailable", reason: "rate limit" } })).toBe("unverifiable");
+    expect(status({ ...good(), handles: { state: "unavailable", reason: "network" } })).toBe("unverifiable");
   });
   it("a real mismatch wins over an unavailable check", () => {
     expect(status({ ...good(), creatorShareOfNonProtocolBps: 1, katki: { state: "unavailable", reason: "x" } })).toBe("mismatch");

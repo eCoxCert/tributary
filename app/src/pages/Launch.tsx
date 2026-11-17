@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { Addr, Av, Banner, IconGithub, Sk, StatusTag } from "../components/ui";
+import { Addr, Av, Banner, IconGithub, Sk, Spinner, StatusTag } from "../components/ui";
 import { CurveChart } from "../components/CurveChart";
 import { TradePanel } from "../components/TradePanel";
 import { ContribPanel } from "../components/ContribPanel";
@@ -40,6 +40,8 @@ export function Launch() {
       quoteToken: ADDR.weth,
       vault: vault.data ?? null,
       katki: info.data ? info.data.katki : { state: "unavailable", reason: "network" },
+      provenance: info.data ? info.data.provenance : { state: "unavailable", reason: "network" },
+      handles: info.data ? info.data.handles : { state: "unavailable", reason: "network" },
     });
   }, [meta, data, vault.data, vault.isPending, info.data, info.isPending]);
   const tributary = verification?.status === "verified";
@@ -114,9 +116,10 @@ export function Launch() {
         <Crumbs name={title} />
 
         {checking && (
-          <div style={{ marginBottom: 24 }}>
-            <Banner kind="warn">Checking this launch against the chain and the repository. Nothing about contributors or fees is shown until that finishes.</Banner>
-          </div>
+          <p className="hint" role="status" style={{ marginBottom: 24, display: "flex", gap: 8, alignItems: "center" }}>
+            <Spinner />
+            Checking this launch against the chain and the repository. Nothing about contributors or fees is shown until that finishes.
+          </p>
         )}
         {verification?.status === "mismatch" && (
           <div style={{ marginBottom: 24 }}>

@@ -8,6 +8,7 @@ import { LaunchRow, LaunchesHead, isListed, statusFromCode } from "../components
 import { useCards, useDiscovery, usePayouts, useTemplate, type Card } from "../hooks/useChainData";
 import { AMMORA_PROTOCOL_TRADING_FEE_SHARE_BPS } from "@ammora-protocol/sdk";
 import { fmt } from "../lib/format";
+import { plural } from "../lib/visibility";
 import { allocationNote } from "../lib/copy";
 import { selectVaultRecipients } from "../lib/split";
 import { EXAMPLE_CONTRIBUTORS } from "../lib/examples";
@@ -23,10 +24,11 @@ export function Landing() {
   const recs = d.launches.slice(0, 12);
   const queries = useCards(recs);
   const cards = (queries.map((q) => q.data).filter(Boolean) as Card[]).filter((c) => isListed(c, false));
-  const live = recs.map((rec, i) => ({ rec, q: queries[i]! })).filter((x) => !x.q.data || (isListed(x.q.data, false) && statusFromCode(x.q.data.snap.state.status) !== "grad"));
+  const visible = recs.map((rec, i) => ({ rec, q: queries[i]! })).filter((x) => !x.q.data || isListed(x.q.data, false));
+  const live = visible.filter((x) => !x.q.data || statusFromCode(x.q.data.snap.state.status) !== "grad");
   const [paused, setPaused] = useState(false);
 
-  const withVault = cards.filter((c) => c.vault);
+  const withVault = cards.filter((c) => c.vault && c.verified?.status === "verified"); // router and payouts: verified launches only
   const pay = usePayouts(withVault.map((c) => ({ vault: c.vault!.vault, block: c.rec.block })));
   const symbolOf = useMemo(() => new Map(withVault.map((c) => [c.vault!.vault.toLowerCase(), c.snap.symbol])), [withVault]);
 
@@ -42,7 +44,7 @@ export function Landing() {
 
   const feeBps = tpl.data?.feeBps;
   const protocolPct = AMMORA_PROTOCOL_TRADING_FEE_SHARE_BPS / 100;
-  const noLaunches = !d.scanning && !d.error && d.launches.length === 0;
+  const noLaunches = !d.scanning && !d.error && visible.length === 0 && queries.every((q) => !q.isPending);
   const phaseWide = typeof window !== "undefined" && window.innerWidth >= 900;
 
   const payouts = pay.data ?? [];
@@ -156,7 +158,7 @@ export function Landing() {
         <div className="wrap">
           <div className="live-hd">
             <h2 className="h2">Launches on testnet now</h2>
-            <Link className="link" to="/launches">{d.launches.length ? `See all ${d.launches.length} launches` : "See all launches"}</Link>
+            <Link className="link" to="/launches">{visible.length ? `See all ${plural(visible.length, "launch")}` : "See all launches"}</Link>
           </div>
           <div className="panel">
             <table className="ledger stack launches">

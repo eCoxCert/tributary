@@ -15,7 +15,14 @@ const states: { name: string; q: string; ready: string }[] = [
   { name: "unverifiable", q: "fixture=unverifiable", ready: ".banner-warn" },
   { name: "loading", q: "fixture=loading", ready: ".sk" },
   { name: "error", q: "fixture=error", ready: ".banner-err" },
+  { name: "checking", q: "fixture=checking", ready: ".hint .spin" },
   { name: "wrong-network", q: "fixture=ok&fw=wrong", ready: ".banner-warn" },
+];
+const lists: { name: string; hash: string; ready: string }[] = [
+  { name: "list-explore", hash: "#/launches?fixture=list", ready: ".ledger tbody tr .tag" },
+  { name: "list-explore-loading", hash: "#/launches?fixture=list-loading", ready: ".sk" },
+  { name: "list-home", hash: "#/?fixture=list", ready: "#live .ledger tbody tr .tag" },
+  { name: "list-home-loading", hash: "#/?fixture=list-loading", ready: "#live .sk" },
 ];
 const report: unknown[] = [];
 const browser = await chromium.launch({ channel: "chrome", headless: true });
@@ -42,6 +49,27 @@ for (const [width, height] of [[1440, 900], [375, 812]] as const) {
     }
     await ctx.close();
   }
+}
+for (const [width, height] of [[1440, 900], [375, 812]] as const) {
+  const ctx = await browser.newContext({ viewport: { width, height }, colorScheme: "light" });
+  await ctx.addInitScript(() => localStorage.setItem("trib-theme", "light"));
+  for (const l of lists) {
+    const page = await ctx.newPage();
+    const errors: string[] = [];
+    page.on("console", (m) => { if (m.type() === "error") errors.push(m.text().slice(0, 200)); });
+    page.on("pageerror", (e) => errors.push("pageerror: " + e.message));
+    await page.goto(BASE + l.hash);
+    try { await page.waitForSelector(l.ready, { timeout: 60_000 }); } catch { errors.push("not ready: " + l.ready); }
+    await page.waitForTimeout(2500);
+    const m = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth, rows: document.querySelectorAll(".ledger tbody tr").length, txt: document.querySelector("#count")?.textContent ?? "" }));
+    const file = `fixture-${l.name}-light-${width}.png`;
+    await page.screenshot({ path: resolve(OUT, file), fullPage: true });
+    console.log(file.padEnd(40), m.sw > m.cw ? `OVERFLOW ${m.sw}/${m.cw}` : "no overflow", `rows=${m.rows} errors=${errors.length}`, m.txt.slice(0, 60));
+    errors.forEach((e) => console.log("   ! " + e));
+    report.push({ file, overflow: m.sw > m.cw, errors });
+    await page.close();
+  }
+  await ctx.close();
 }
 await browser.close();
 writeFileSync(resolve(OUT, "fixture-report.json"), JSON.stringify(report, null, 2));

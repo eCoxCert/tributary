@@ -12,6 +12,9 @@ export type KatkiState =
   | { state: "invalid" } // the file exists but fails validation
   | { state: "unavailable"; reason: string }; // network / rate limit
 
+/** Checks on the repository side that are independent of the .katki.json text. */
+export type RepoCheck = { state: "ok" } | { state: "mismatch"; detail: string } | { state: "unavailable"; reason: string };
+
 export type VaultFacts = {
   owner: string;
   recipients: { recipient: string; share: bigint }[];
@@ -30,6 +33,10 @@ export type VerifyInput = {
   expectedToken: string;
   vault: VaultFacts | null;
   katki: KatkiState;
+  /** Is the recorded commit part of the default branch (not a fork's commit)? */
+  provenance: RepoCheck;
+  /** Are the listed GitHub handles real contributors of the repository? */
+  handles: RepoCheck;
 };
 
 export type Verification =
@@ -63,6 +70,11 @@ export function verifyTributaryLaunch(i: VerifyInput): Verification {
     const listed = new Set(i.katki.wallets.map((w) => w.toLowerCase()));
     const stray = i.vault.recipients.filter((r) => !listed.has(r.recipient.toLowerCase()));
     if (stray.length) problems.push(`${stray.length} vault recipient${stray.length > 1 ? "s are" : " is"} not listed in .katki.json at the recorded commit.`);
+  }
+
+  for (const [c, what] of [[i.provenance, "commit"], [i.handles, "handles"]] as const) {
+    if (c.state === "mismatch") problems.push(c.detail);
+    else if (c.state === "unavailable") reasons.push(`The repository's ${what} could not be checked on GitHub (${c.reason}).`);
   }
 
   if (problems.length) return { status: "mismatch", problems };

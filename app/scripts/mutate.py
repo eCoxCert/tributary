@@ -36,6 +36,12 @@ M = [
     ("src/lib/katkiCheck.ts", 'if (text === null) return { state: { state: "missing" }, file: null };', "", "404 not detected"),
     ("src/lib/cardVerify.ts", "token: p.vault.token,", "token: p.quoteToken,", "card ignores vault token"),
     ("src/lib/katki.ts", "if (isPlaceholderWallet(wallet)) {", "if (false) {", "placeholder wallet accepted"),
+    ("src/lib/github.ts", 'j.status === "ahead" || j.status === "identical" ? "ancestor" : "not-ancestor"', '"ancestor"', "compare: diverged/behind accepted"),
+    ("src/lib/github.ts", "if (res.status === 404 || res.status === 422) {", "if (false) {", "compare: 404 not a mismatch"),
+    ("src/lib/github.ts", "if (res.status === 403 || res.status === 429) {\n      const reset", "if (false) {\n      const reset", "compare: rate limit not detected"),
+    ("src/lib/katkiCheck.ts", "return c.ok ? ({ state: \"ok\" } as RepoCheck)", "return true ? ({ state: \"ok\" } as RepoCheck)", "handles not checked"),
+    ("src/lib/katkiCheck.ts", "return r === \"ancestor\" ?", "return true ?", "provenance not checked"),
+    ("src/lib/verify.ts", 'if (c.state === "mismatch") problems.push(c.detail);', "", "repo checks ignored"),
 ]
 bad = 0
 for path, old, new, what in M:
@@ -44,12 +50,12 @@ for path, old, new, what in M:
         print("SKIP (pattern not found)", path, what); bad += 1; continue
     open(path, "w", encoding="utf-8").write(src.replace(old, new, 1))
     try:
-        r = subprocess.run("npx vitest run", shell=True, capture_output=True, text=True)
+        r = subprocess.run("npx vitest run", shell=True, capture_output=True, text=True, encoding="utf-8", errors="replace")
     finally:
         open(path, "w", encoding="utf-8").write(src)
     killed = r.returncode != 0
     print(("KILLED  " if killed else "SURVIVED"), path, "|", what)
     bad += 0 if killed else 1
-r = subprocess.run("npx vitest run", shell=True, capture_output=True, text=True)
+r = subprocess.run("npx vitest run", shell=True, capture_output=True, text=True, encoding="utf-8", errors="replace")
 print("restored suite exit:", r.returncode)
 sys.exit(1 if bad or r.returncode else 0)

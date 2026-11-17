@@ -8,6 +8,8 @@ import type { LaunchData, KatkiInfo } from "../hooks/useLaunch";
 import type { AllocationRead } from "../lib/allocation";
 import { EXAMPLE_CONTRIBUTORS } from "../lib/examples";
 import { selectVaultRecipients } from "../lib/split";
+import { verifyLaunch } from "../lib/cardVerify";
+import type { Card } from "../hooks/useChainData";
 import { splitByShares } from "../lib/allocation";
 import type { LaunchRecord } from "../lib/launches";
 
@@ -53,8 +55,15 @@ export function fixtureVault(kind: string): VaultSnapshot {
   };
 }
 
+export const fixtureInfoAsync = async (kind: string): Promise<KatkiInfo> => {
+  if (kind === "checking") return new Promise<KatkiInfo>(() => {});
+  return fixtureInfo(kind);
+};
+
 export const fixtureInfo = (kind: string): KatkiInfo => ({
   katki: kind === "unverifiable" ? { state: "unavailable", reason: "rate limit" } : { state: "ok", wallets: EXAMPLE_CONTRIBUTORS.map((c) => c.wallet) },
+  provenance: kind === "unverifiable" ? { state: "unavailable", reason: "rate limit" } : { state: "ok" },
+  handles: kind === "unverifiable" ? { state: "unavailable", reason: "rate limit" } : { state: "ok" },
   file: { version: 1, contributors: EXAMPLE_CONTRIBUTORS.map((c) => ({ github: c.github, wallet: c.wallet as `0x${string}` })) },
   history: [...EXAMPLE_CONTRIBUTORS.map((c) => ({ login: c.github, contributions: c.commits })), { login: "ayo-b", contributions: 31 }],
   repo: { fullName: "tidewater/quill-rpc", defaultBranch: "main", stars: 2140, language: "TypeScript", isPrivate: false, htmlUrl: "https://github.com/tidewater/quill-rpc" },
@@ -70,6 +79,33 @@ export const fixtureRecord: LaunchRecord = {
   txHash: ("0x" + "ab".repeat(32)) as `0x${string}`,
   meta: null,
 };
+
+export function fixtureRecords(real: LaunchRecord[]): LaunchRecord[] {
+  const names = ["tidewater/quill-rpc", "pinecrest/gas-oracle-rs", "lumen-rs/evm-trace", "marlow-io/eip712-forms"];
+  return real.slice(0, 4).map((r, i) => ({ ...r, meta: { app: "tributary" as const, repo: names[i]!, katkiCommit: SHA, vault: FIXTURE_VAULT } }));
+}
+
+/** Card for the list fixtures: quill-rpc and eip712-forms verified, gas-oracle-rs unverifiable (GitHub rate limit), evm-trace mismatch (hidden). */
+export async function fixtureCard(rec: LaunchRecord, loading: boolean): Promise<Card> {
+  if (loading) return new Promise<Card>(() => {});
+  const real = await readCurveSnapshot(rec.curve, rec.token);
+  const repo = rec.meta?.repo ?? "";
+  const mismatch = repo === "lumen-rs/evm-trace";
+  const snap = mismatch ? real : { ...real, state: { ...real.state, creator: FIXTURE_OWNER }, config: { ...real.config, partnerRecipient: FIXTURE_VAULT, creatorShareOfNonProtocolBps: 0 } };
+  const unavailable = repo === "pinecrest/gas-oracle-rs";
+  const verified = verifyLaunch({
+    meta: rec.meta!,
+    partnerRecipient: snap.config.partnerRecipient,
+    creatorShareOfNonProtocolBps: snap.config.creatorShareOfNonProtocolBps,
+    creator: snap.state.creator,
+    quoteToken: WETH,
+    vault: fixtureVault("ok"),
+    katki: unavailable ? { state: "unavailable", reason: "rate limit" } : { state: "ok", wallets: EXAMPLE_CONTRIBUTORS.map((c) => c.wallet) },
+    provenance: unavailable ? { state: "unavailable", reason: "rate limit" } : { state: "ok" },
+    handles: unavailable ? { state: "unavailable", reason: "rate limit" } : { state: "ok" },
+  });
+  return { rec, snap, vault: fixtureVault("ok"), timestamp: Date.now() - 3_600_000 * (1 + (rec.block % 20n === 0n ? 1 : 5)), verified };
+}
 
 export function fixtureAllocation(): AllocationRead {
   const total = 120_000_000_000_000_000n; // 120M tokens at 9 decimals

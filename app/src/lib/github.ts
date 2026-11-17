@@ -20,10 +20,27 @@ export type RepoRef = { owner: string; name: string };
 export type RepoInfo = { fullName: string; defaultBranch: string; stars: number; language: string | null; isPrivate: boolean; htmlUrl: string };
 
 export type Deps = {
+  /** In-flight and finished requests of this page, so one repo is asked once. */
+  memo?: Map<string, Promise<unknown>>;
   fetch: typeof fetch;
   storage: Pick<Storage, "getItem" | "setItem"> | null;
   now: () => number;
 };
+
+const MEMO = new Map<string, Promise<unknown>>();
+
+async function once<T>(deps: Deps, key: string, fn: () => Promise<T>): Promise<T> {
+  const m = deps.memo;
+  if (!m) return fn();
+  const hit = m.get(key);
+  if (hit) return hit as Promise<T>;
+  const p = fn().catch((e) => {
+    m.delete(key);
+    throw e;
+  });
+  m.set(key, p);
+  return p;
+}
 
 export function defaultDeps(): Deps {
   let storage: Deps["storage"] = null;
@@ -32,7 +49,7 @@ export function defaultDeps(): Deps {
   } catch {
     storage = null;
   }
-  return { fetch: (...a) => fetch(...a), storage, now: () => Date.now() };
+  return { fetch: (...a) => fetch(...a), storage, now: () => Date.now(), memo: MEMO };
 }
 
 /** Accepts "owner/name", a github.com URL, with or without .git or a trailing slash. */
@@ -89,7 +106,11 @@ async function api(deps: Deps, path: string): Promise<Response> {
   return res;
 }
 
-export async function getRepoInfo(ref: RepoRef, deps: Deps = defaultDeps()): Promise<RepoInfo> {
+export function getRepoInfo(ref: RepoRef, deps: Deps = defaultDeps()): Promise<RepoInfo> {
+  return once(deps, `info:${ref.owner}/${ref.name}`.toLowerCase(), () => getRepoInfoRaw(ref, deps));
+}
+
+async function getRepoInfoRaw(ref: RepoRef, deps: Deps): Promise<RepoInfo> {
   const key = `repo:${ref.owner}/${ref.name}`.toLowerCase();
   const hit = readCache<RepoInfo>(deps, key);
   if (hit) return hit;
@@ -135,7 +156,11 @@ export async function getKatkiText(ref: RepoRef, sha: string, deps: Deps = defau
 }
 
 /** Repo contributors with commit counts (login only; anonymous authors have no handle and are skipped). Up to 5 pages of 100. */
-export async function getContributors(ref: RepoRef, deps: Deps = defaultDeps()): Promise<RepoContributor[]> {
+export function getContributors(ref: RepoRef, deps: Deps = defaultDeps()): Promise<RepoContributor[]> {
+  return once(deps, `contrib:${ref.owner}/${ref.name}`.toLowerCase(), () => getContributorsRaw(ref, deps));
+}
+
+async function getContributorsRaw(ref: RepoRef, deps: Deps): Promise<RepoContributor[]> {
   const key = `contrib:${ref.owner}/${ref.name}`.toLowerCase();
   const hit = readCache<RepoContributor[]>(deps, key);
   if (hit) return hit;
@@ -149,4 +174,36 @@ export async function getContributors(ref: RepoRef, deps: Deps = defaultDeps()):
   }
   writeCache(deps, key, out);
   return out;
+}
+
+/**
+ * Is `sha` part of the default branch's history? (GET compare/{sha}...{branch}: "ahead" or "identical" means yes.)
+ * "behind" / "diverged" / 404 mean the commit is not an ancestor, e.g. a fork's commit. Cached per (repo, sha).
+ */
+export type AncestorCheck = "ancestor" | "not-ancestor";
+export function isAncestorOfDefault(ref: RepoRef, sha: string, branch: string, deps: Deps = defaultDeps()): Promise<AncestorCheck> {
+  const key = `anc:${ref.owner}/${ref.name}@${sha}`.toLowerCase();
+  return once(deps, key, async () => {
+    const hit = readCache<AncestorCheck>(deps, key);
+    if (hit) return hit;
+    let res: Response;
+    try {
+      res = await deps.fetch(`https://api.github.com/repos/${ref.owner}/${ref.name}/compare/${sha}...${encodeURIComponent(branch)}`, { headers: { Accept: "application/vnd.github+json" } });
+    } catch {
+      throw new GitHubError("network", "GitHub could not be reached.");
+    }
+    if (res.status === 404 || res.status === 422) {
+      writeCache(deps, key, "not-ancestor");
+      return "not-ancestor" as AncestorCheck;
+    }
+    if (res.status === 403 || res.status === 429) {
+      const reset = Number(res.headers.get("x-ratelimit-reset"));
+      throw new GitHubError("rate-limit", "GitHub's anonymous request limit is used up.", Number.isFinite(reset) && reset > 0 ? new Date(reset * 1000) : undefined);
+    }
+    if (!res.ok) throw new GitHubError("bad-response", `GitHub answered with HTTP ${res.status}.`);
+    const j = (await res.json()) as { status?: string };
+    const out: AncestorCheck = j.status === "ahead" || j.status === "identical" ? "ancestor" : "not-ancestor";
+    writeCache(deps, key, out);
+    return out;
+  });
 }

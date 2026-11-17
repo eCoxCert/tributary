@@ -21,6 +21,8 @@ import { sampleCurve, curveTotals, humanPrice } from "../lib/curveMath";
 import { scanRanges, splitRangesNewestFirst } from "../lib/logs";
 import { ammoraAFSVaultAbi } from "@ammora-protocol/sdk";
 
+const fx = () => (typeof window === "undefined" ? null : new URLSearchParams(window.location.hash.split("?")[1] ?? "").get("fixture"));
+
 export type Discovery = {
   launches: LaunchRecord[];
   scanning: boolean;
@@ -45,7 +47,17 @@ export function useDiscovery(all: boolean): Discovery {
     acRef.current = ac;
     setScanning(true);
     setError(null);
-    discoverLaunches({ extend, signal: ac.signal, onUpdate: (s) => !ac.signal.aborted && setState(s) })
+    const go = async () => {
+      if (import.meta.env.DEV && fx()?.startsWith("list")) {
+        const real = await discoverLaunches({ extend: false, signal: ac.signal, onUpdate: () => {} });
+        const f = await import("../fixtures/tributary");
+        const fixed = f.fixtureRecords(real.launches);
+        if (!ac.signal.aborted) setState({ ...real, launches: fixed, source: "chain", done: true });
+        return;
+      }
+      await discoverLaunches({ extend, signal: ac.signal, onUpdate: (s) => !ac.signal.aborted && setState(s) });
+    };
+    go()
       .catch((e) => {
         if (!ac.signal.aborted) setError(humanizeError(e));
       })
@@ -82,6 +94,7 @@ export type Card = {
 };
 
 async function readCard(rec: LaunchRecord): Promise<Card> {
+  if (import.meta.env.DEV && fx()?.startsWith("list")) return (await import("../fixtures/tributary")).fixtureCard(rec, fx() === "list-loading");
   const [snap, vault, block, katki] = await Promise.all([
     readCurveSnapshot(rec.curve, rec.token),
     rec.meta ? readVaultSnapshot(rec.meta.vault).catch(() => null) : Promise.resolve(null),
@@ -97,6 +110,8 @@ async function readCard(rec: LaunchRecord): Promise<Card> {
         quoteToken: ADDR.weth,
         vault,
         katki: katki.state,
+        provenance: katki.provenance,
+        handles: katki.handles,
       })
     : null;
   return { rec, snap, vault, timestamp: block ? Number(block.timestamp) * 1000 : null, verified };

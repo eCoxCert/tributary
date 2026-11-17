@@ -245,7 +245,7 @@ export function Create() {
 
   const feePct = tpl.data ? tpl.data.feeBps / 100 : null;
   const protocolPct = AMMORA_PROTOCOL_TRADING_FEE_SHARE_BPS / 100;
-  const katkiInfoForPanel = useMemo(() => (found ? { file: found.file, history: found.history, repo: found.info, notes: [], katki: { state: "ok" as const, wallets: found.file.contributors.map((c) => c.wallet) } } : undefined), [found]);
+  const katkiInfoForPanel = useMemo(() => (found ? { file: found.file, history: found.history, repo: found.info, notes: [], katki: { state: "ok" as const, wallets: found.file.contributors.map((c) => c.wallet) }, provenance: { state: "ok" as const }, handles: { state: "ok" as const } } : undefined), [found]);
 
   return (
     <main className="page">

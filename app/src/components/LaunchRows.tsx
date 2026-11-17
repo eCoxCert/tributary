@@ -3,6 +3,7 @@ import type { UseQueryResult } from "@tanstack/react-query";
 import { Av, Sk, StatusTag, type LaunchStatus } from "./ui";
 import { fmt } from "../lib/format";
 import type { Card } from "../hooks/useChainData";
+import { isListedVerdict } from "../lib/visibility";
 import type { LaunchRecord } from "../lib/launches";
 
 export function statusOf(card: Card): LaunchStatus {
@@ -24,8 +25,7 @@ export function statusFromCode(code: number): LaunchStatus {
 
 /** Listed on the launches page: verified Tributary launches only (debug view adds everything else). */
 export function isListed(card: Card, debug: boolean): boolean {
-  if (debug) return true;
-  return !!card.rec.meta && card.verified?.status === "verified";
+  return isListedVerdict(!!card.rec.meta, card.verified, debug);
 }
 
 export type RowModel = {
@@ -38,6 +38,7 @@ export type RowModel = {
   symbol: string;
   name: string;
   sub: string;
+  unchecked: boolean;
 };
 
 export function rowModel(card: Card): RowModel {
@@ -47,6 +48,7 @@ export function rowModel(card: Card): RowModel {
   const remaining = snap.progress.target > snap.progress.current ? snap.progress.target - snap.progress.current : 0n;
   const remEth = Number(remaining) / 1e18;
   const left = st === "grad" ? "In pool" : snap.progress.progressBps >= 10_000 ? "Ready" : `${remEth > 1000 ? fmt.compact(remEth) : fmt.eth(remaining)} ETH`;
+  const claims = !rec.meta || card.verified?.status === "verified"; // no contributor or fee claims for anything unchecked
   const fees = vault ? `${fmt.eth(vault.totalFunded + vault.pendingInFeeVault)} ETH` : null;
   const age = timestamp ? fmt.ago(timestamp) : null;
   return {
@@ -54,8 +56,9 @@ export function rowModel(card: Card): RowModel {
     status: st,
     pct: st === "grad" ? 100 : pct,
     left,
-    fees,
-    recipients: vault ? vault.recipients.length : null,
+    fees: claims ? fees : null,
+    recipients: claims && vault ? vault.recipients.length : null,
+    unchecked: card.verified?.status === "unverifiable",
     symbol: snap.symbol,
     name: snap.name,
     sub: [!rec.meta ? "Not a Tributary launch" : card.verified?.status === "mismatch" ? "Does not follow Tributary rules" : card.verified?.status === "unverifiable" ? "Could not be checked" : null, age].filter(Boolean).join(" · "),
@@ -134,7 +137,7 @@ export function LaunchRow({ rec, q, debug }: { rec: LaunchRecord; q: UseQueryRes
       <td data-k="To graduation" className="r c-left">{m.left}</td>
       <td data-k="Contributors" className="r c-contrib">{m.recipients ?? "–"}</td>
       <td data-k="Fees earned" className="r c-fees">{m.fees ?? "–"}</td>
-      <td className="c-status"><StatusTag status={m.status} /></td>
+      <td className="c-status">{m.unchecked ? <span className="tag">Could not be checked</span> : <StatusTag status={m.status} />}</td>
     </tr>
   );
 }
