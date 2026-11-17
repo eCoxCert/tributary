@@ -26,7 +26,7 @@ const lists: { name: string; hash: string; ready: string }[] = [
 ];
 const report: unknown[] = [];
 const browser = await chromium.launch({ channel: "chrome", headless: true });
-for (const [width, height] of [[1440, 900], [375, 812]] as const) {
+for (const [width, height] of [[1440, 900], [1280, 800], [1024, 768], [768, 1024], [375, 812]] as const) {
   for (const theme of ["light", "dark"] as const) {
     const ctx = await browser.newContext({ viewport: { width, height }, colorScheme: theme });
     await ctx.addInitScript((t) => localStorage.setItem("trib-theme", t), theme);
@@ -50,7 +50,7 @@ for (const [width, height] of [[1440, 900], [375, 812]] as const) {
     await ctx.close();
   }
 }
-for (const [width, height] of [[1440, 900], [375, 812]] as const) {
+for (const [width, height] of [[1440, 900], [1280, 800], [1024, 768], [768, 1024], [375, 812]] as const) {
   const ctx = await browser.newContext({ viewport: { width, height }, colorScheme: "light" });
   await ctx.addInitScript(() => localStorage.setItem("trib-theme", "light"));
   for (const l of lists) {

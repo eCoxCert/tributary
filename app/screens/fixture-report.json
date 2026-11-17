@@ -60,6 +60,186 @@
     "errors": []
   },
   {
+    "file": "fixture-ok-light-1280.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "file": "fixture-claim-light-1280.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "file": "fixture-owner-send-light-1280.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "file": "fixture-mismatch-light-1280.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "file": "fixture-unverifiable-light-1280.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "file": "fixture-loading-light-1280.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "file": "fixture-error-light-1280.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "file": "fixture-checking-light-1280.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "file": "fixture-wrong-network-light-1280.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "file": "fixture-ok-dark-1280.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "file": "fixture-mismatch-dark-1280.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "file": "fixture-unverifiable-dark-1280.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "file": "fixture-ok-light-1024.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "file": "fixture-claim-light-1024.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "file": "fixture-owner-send-light-1024.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "file": "fixture-mismatch-light-1024.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "file": "fixture-unverifiable-light-1024.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "file": "fixture-loading-light-1024.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "file": "fixture-error-light-1024.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "file": "fixture-checking-light-1024.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "file": "fixture-wrong-network-light-1024.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "file": "fixture-ok-dark-1024.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "file": "fixture-mismatch-dark-1024.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "file": "fixture-unverifiable-dark-1024.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "file": "fixture-ok-light-768.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "file": "fixture-claim-light-768.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "file": "fixture-owner-send-light-768.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "file": "fixture-mismatch-light-768.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "file": "fixture-unverifiable-light-768.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "file": "fixture-loading-light-768.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "file": "fixture-error-light-768.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "file": "fixture-checking-light-768.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "file": "fixture-wrong-network-light-768.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "file": "fixture-ok-dark-768.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "file": "fixture-mismatch-dark-768.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "file": "fixture-unverifiable-dark-768.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
     "file": "fixture-ok-light-375.png",
     "overflow": false,
     "errors": []
@@ -136,6 +316,66 @@
   },
   {
     "file": "fixture-list-home-loading-light-1440.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "file": "fixture-list-explore-light-1280.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "file": "fixture-list-explore-loading-light-1280.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "file": "fixture-list-home-light-1280.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "file": "fixture-list-home-loading-light-1280.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "file": "fixture-list-explore-light-1024.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "file": "fixture-list-explore-loading-light-1024.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "file": "fixture-list-home-light-1024.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "file": "fixture-list-home-loading-light-1024.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "file": "fixture-list-explore-light-768.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "file": "fixture-list-explore-loading-light-768.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "file": "fixture-list-home-light-768.png",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "file": "fixture-list-home-loading-light-768.png",
     "overflow": false,
     "errors": []
   },
